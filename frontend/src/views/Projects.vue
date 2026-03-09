@@ -1,12 +1,29 @@
 <template>
   <div class="projects-page">
     <div class="page-header">
-      <h2>项目管理</h2>
+      <div>
+        <h2>项目管理</h2>
+        <p>按测试团队使用习惯优化：先筛选，再操作，最后进入项目。</p>
+      </div>
       <el-button type="primary" :icon="Plus" @click="showCreate = true">新建项目</el-button>
     </div>
 
+    <div class="toolbar page-card">
+      <el-input v-model="keyword" placeholder="搜索项目名称..." clearable style="width:260px" />
+      <el-select v-model="statusFilter" placeholder="全部状态" clearable style="width:140px">
+        <el-option label="进行中" value="active" />
+        <el-option label="已归档" value="archived" />
+      </el-select>
+      <el-select v-model="sortBy" style="width:170px">
+        <el-option label="最近更新" value="updated" />
+        <el-option label="用例最多" value="cases" />
+        <el-option label="需求最多" value="requirements" />
+      </el-select>
+      <div class="toolbar-summary">共 {{ filteredProjects.length }} 个项目</div>
+    </div>
+
     <div class="project-grid">
-      <div v-for="p in projectStore.projects" :key="p.id" class="project-card">
+      <div v-for="p in filteredProjects" :key="p.id" class="project-card">
         <div class="card-top">
           <span class="p-icon">{{ p.icon }}</span>
           <div style="display:flex;gap:6px">
@@ -63,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -78,11 +95,27 @@ const editMode = ref(false)
 const saving = ref(false)
 const editId = ref<number>()
 const formRef = ref()
+const keyword = ref('')
+const statusFilter = ref('')
+const sortBy = ref<'updated' | 'cases' | 'requirements'>('updated')
 const icons = ['📋', '🛒', '🏦', '🏥', '🎮', '📱', '💼', '🚀', '🔧', '🌐', '📊', '🤖']
 
 const form = reactive({ name: '', description: '', icon: '📋' })
 
 onMounted(() => projectStore.fetchProjects())
+const filteredProjects = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  const list = projectStore.projects.filter(p => {
+    const keywordOk = !kw || p.name.toLowerCase().includes(kw)
+    const statusOk = !statusFilter.value || p.status === statusFilter.value
+    return keywordOk && statusOk
+  })
+  return list.sort((a, b) => {
+    if (sortBy.value === 'cases') return (b.case_count || 0) - (a.case_count || 0)
+    if (sortBy.value === 'requirements') return (b.req_count || 0) - (a.req_count || 0)
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  })
+})
 
 function openProject(p: Project) {
   projectStore.setCurrent(p)
@@ -136,18 +169,31 @@ async function deleteProject(p: Project) {
 
 <style scoped>
 .projects-page { max-width: 1200px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.page-header h2 { font-size: 24px; font-weight: 700; }
+.page-header p { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+.toolbar-summary {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 
 .project-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .project-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 20px;
   transition: all .2s;
 }
-.project-card:hover { border-color: #4f6ef7; box-shadow: 0 4px 16px rgba(79,110,247,.1); }
+.project-card:hover { border-color: #4f6ef7; box-shadow: 0 10px 22px rgba(79,110,247,.12); transform: translateY(-2px); }
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .p-icon { font-size: 32px; }
 .p-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }

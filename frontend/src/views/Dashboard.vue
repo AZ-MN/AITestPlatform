@@ -16,6 +16,14 @@
       </div>
     </div>
 
+    <div class="quick-actions page-card">
+      <el-button type="primary" @click="$router.push('/projects')">新建/管理项目</el-button>
+      <el-button @click="goCurrent('requirements')">录入需求</el-button>
+      <el-button @click="goCurrent('generate')">发起生成</el-button>
+      <el-button @click="$router.push('/tasks')">查看任务队列</el-button>
+      <div class="task-hint">当前运行 {{ runningTasks }} / 排队 {{ queuedTasks }}</div>
+    </div>
+
     <!-- 最近项目 -->
     <div class="section">
       <div class="section-header">
@@ -53,6 +61,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
+import { taskApi } from '@/api/tasks'
 import type { Project } from '@/api/types'
 
 const auth = useAuthStore()
@@ -61,9 +70,14 @@ const router = useRouter()
 
 const totalCases = ref(0)
 const totalReqs = ref(0)
+const runningTasks = ref(0)
+const queuedTasks = ref(0)
 
 onMounted(async () => {
   await projectStore.fetchProjects()
+  const jobs = await taskApi.list({})
+  runningTasks.value = jobs.filter(j => j.status === 'running').length
+  queuedTasks.value = jobs.filter(j => j.status === 'queued').length
   totalCases.value = projectStore.projects.reduce((s, p) => s + (p.case_count || 0), 0)
   totalReqs.value = projectStore.projects.reduce((s, p) => s + (p.req_count || 0), 0)
 })
@@ -83,6 +97,10 @@ function openProject(p: Project) {
   projectStore.setCurrent(p)
   router.push(`/projects/${p.id}/requirements`)
 }
+function goCurrent(section: 'requirements' | 'generate') {
+  if (!projectStore.current) return router.push('/projects')
+  router.push(`/projects/${projectStore.current.id}/${section}`)
+}
 </script>
 
 <style scoped>
@@ -90,6 +108,18 @@ function openProject(p: Project) {
 .page-title { margin-bottom: 24px; }
 .page-title h2 { font-size: 22px; font-weight: 700; }
 .subtitle { color: var(--text-secondary); font-size: 14px; }
+.quick-actions {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+}
+.task-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 
 .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
 .stat-card {

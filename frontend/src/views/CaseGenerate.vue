@@ -1,8 +1,14 @@
 <template>
   <div class="generate-page">
     <div class="page-header">
-      <h2>智能生成测试用例</h2>
-      <p>从已解析需求中快速生成高质量测试用例，支持按模块与场景精细控制。</p>
+      <div>
+        <h2>智能生成测试用例</h2>
+        <p>按“需求筛选→参数确认→提交任务”三步走，减少误操作。</p>
+      </div>
+      <div class="header-actions">
+        <el-button @click="resetFilters">重置筛选</el-button>
+        <el-button type="primary" plain @click="$router.push(`/tasks?project_id=${projectId}`)">查看任务中心</el-button>
+      </div>
     </div>
 
     <div class="generate-layout">
@@ -19,6 +25,7 @@
 
         <div v-if="reqPoints.length" class="req-summary">
           <el-tag type="success" size="small">{{ reqPoints.length }} 个需求点已加载</el-tag>
+          <el-tag size="small" type="info">当前待生成 {{ filteredPoints.length }} 个需求点</el-tag>
           <div class="module-filter-row">
             <span>模块筛选：</span>
             <el-select v-model="config.module_filter" placeholder="全部模块" clearable size="small" style="flex:1">
@@ -244,6 +251,11 @@ function applyRegressionPreset() {
   config.cover_scenarios = ['normal', 'exception', 'boundary']
   ElMessage.success('已应用回归最小集模板（P0 + 核心场景）')
 }
+function resetFilters() {
+  config.module_filter = undefined
+  config.priority_filter = undefined
+  config.custom_instructions = ''
+}
 </script>
 
 <style scoped>
@@ -254,11 +266,13 @@ function applyRegressionPreset() {
 .page-header {
   margin-bottom: 16px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
 }
 .page-header h2 { font-size: 26px; font-weight: 700; letter-spacing: .3px; }
 .page-header p { font-size: 13px; color: var(--text-secondary); }
+.header-actions { display: flex; gap: 8px; }
 
 .generate-layout { display: grid; grid-template-columns: 400px 1fr; gap: 16px; align-items: start; }
 
@@ -295,6 +309,9 @@ function applyRegressionPreset() {
   border-radius: 10px;
   padding: 10px;
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .module-filter-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 

@@ -1,15 +1,28 @@
 <template>
   <div class="req-page">
     <div class="page-header">
-      <h2>需求管理</h2>
+      <div>
+        <h2>需求管理</h2>
+        <p>先检索/过滤需求，再进入解析与生成，减少重复点击。</p>
+      </div>
       <div class="header-actions">
         <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
         <el-button type="primary" :icon="Plus" @click="showText = true">手动输入</el-button>
       </div>
     </div>
 
+    <div class="req-toolbar page-card">
+      <el-input v-model="keyword" clearable placeholder="搜索标题..." style="width:240px" />
+      <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width:140px">
+        <el-option label="已解析" value="parsed" />
+        <el-option label="解析中" value="parsing" />
+        <el-option label="失败" value="failed" />
+      </el-select>
+      <div class="toolbar-summary">共 {{ filteredRequirements.length }} 条</div>
+    </div>
+
     <!-- 需求列表 -->
-    <div v-if="!loading && requirements.length === 0" class="empty-state">
+    <div v-if="!loading && filteredRequirements.length === 0" class="empty-state">
       <div class="empty-icon">📄</div>
       <h3>暂无需求</h3>
       <p>上传需求文档或手动输入需求，平台将自动解析需求点用于生成测试用例</p>
@@ -19,7 +32,7 @@
       </div>
     </div>
 
-    <el-table v-else v-loading="loading" :data="requirements" row-class-name="req-row">
+    <el-table v-else v-loading="loading" :data="filteredRequirements" row-class-name="req-row">
       <el-table-column label="需求标题" prop="title" min-width="200" show-overflow-tooltip />
       <el-table-column label="来源" width="90">
         <template #default="{ row }">
@@ -238,6 +251,8 @@ const route = useRoute()
 const router = useRouter()
 const projectId = computed(() => Number(route.params.id))
 const requirements = ref<Requirement[]>([])
+const keyword = ref('')
+const statusFilter = ref<string>()
 const loading = ref(false)
 const uploading = ref(false)
 const saving = ref(false)
@@ -268,6 +283,14 @@ const xmindTree = computed(() => {
     groups.get(moduleName)!.push(p)
   })
   return [...groups.entries()].map(([module, points]) => ({ module, points }))
+})
+const filteredRequirements = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  return requirements.value.filter(r => {
+    const keywordOk = !kw || r.title.toLowerCase().includes(kw)
+    const statusOk = !statusFilter.value || r.status === statusFilter.value
+    return keywordOk && statusOk
+  })
 })
 
 onMounted(async () => {
@@ -528,9 +551,18 @@ function fmtDate(s: string) {
 
 <style scoped>
 .req-page { max-width: 1200px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.page-header h2 { font-size: 24px; font-weight: 700; }
+.page-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 .header-actions { display: flex; gap: 8px; }
+.req-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 14px;
+}
+.toolbar-summary { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
 
 .empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; border: 1px solid var(--border); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }

@@ -3,14 +3,16 @@
 
 :root {
   --primary: #4f6ef7;
-  --primary-light: #eef0fe;
+  --primary-light: #eef2ff;
   --sidebar-width: 220px;
-  --header-height: 56px;
-  --bg: #f5f7fa;
+  --header-height: 74px;
+  --bg: #f3f6fb;
   --card-bg: #ffffff;
-  --border: #e6e8f0;
+  --border: #e7ebf4;
   --text-primary: #1a1c2e;
   --text-secondary: #6b7280;
+  --shadow-soft: 0 10px 30px rgba(16, 24, 40, .06);
+  --radius-lg: 14px;
 }
 
 html, body, #app {
@@ -29,9 +31,28 @@ html, body, #app {
 /* 卡片 */
 .page-card {
   background: var(--card-bg);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   padding: 20px 24px;
+  box-shadow: var(--shadow-soft);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.page-header h2 {
+  font-size: 24px;
+  letter-spacing: .2px;
+}
+
+.page-header p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 /* 优先级标签 */

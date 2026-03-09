@@ -61,16 +61,22 @@
     </el-aside>
 
     <!-- 主内容区 -->
-    <el-container class="main-container">
-      <el-header class="app-header">
-        <div class="header-left">
-          <el-breadcrumb>
-            <el-breadcrumb-item v-for="b in breadcrumbs" :key="b.path" :to="b.path">
-              {{ b.title }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
-        <div class="header-right">
+      <el-container class="main-container">
+        <el-header class="app-header">
+          <div class="header-left">
+            <el-breadcrumb>
+              <el-breadcrumb-item v-for="b in breadcrumbs" :key="b.path" :to="b.path">
+                {{ b.title }}
+              </el-breadcrumb-item>
+            </el-breadcrumb>
+            <div v-if="projectStore.current" class="project-shortcuts">
+              <el-button size="small" :type="isSectionActive('requirements') ? 'primary' : 'default'" @click="openCurrentSection('requirements')">需求</el-button>
+              <el-button size="small" :type="isSectionActive('generate') ? 'primary' : 'default'" @click="openCurrentSection('generate')">生成</el-button>
+              <el-button size="small" :type="isSectionActive('cases') ? 'primary' : 'default'" @click="openCurrentSection('cases')">用例</el-button>
+              <el-button size="small" :type="isSectionActive('/tasks') ? 'primary' : 'default'" @click="router.push(`/tasks?project_id=${projectStore.current.id}`)">任务</el-button>
+            </div>
+          </div>
+          <div class="header-right">
           <el-popover v-if="projectStore.projects.length" placement="bottom-end" :width="360" trigger="click">
             <template #reference>
               <div class="project-switcher">
@@ -191,6 +197,13 @@ function selectProject(p: Project) {
 function enterProject(p: Project) {
   selectProject(p)
   router.push(`/projects/${p.id}/requirements`)
+}
+function openCurrentSection(section: 'requirements' | 'generate' | 'cases') {
+  if (!projectStore.current) return
+  router.push(`/projects/${projectStore.current.id}/${section}`)
+}
+function isSectionActive(section: string) {
+  return route.path.includes(section)
 }
 
 async function deleteProject(p: Project) {
@@ -328,6 +341,16 @@ watch(() => route.params.id, syncCurrentProject)
   align-items: center;
   gap: 10px;
 }
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.project-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .project-switcher {
   display: flex;
   align-items: center;
@@ -409,7 +432,7 @@ watch(() => route.params.id, syncCurrentProject)
 .main-container { overflow: hidden; }
 
 .app-header {
-  height: 56px;
+  height: 74px;
   display: flex;
   align-items: center;
   justify-content: space-between;

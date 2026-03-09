@@ -1,7 +1,10 @@
 <template>
   <div class="task-page">
     <div class="page-header">
-      <h2>任务中心</h2>
+      <div>
+        <h2>任务中心</h2>
+        <p>实时追踪队列进度，异常可立即中断并重试。</p>
+      </div>
       <div class="actions">
         <el-select v-model="taskType" placeholder="全部类型" clearable style="width:140px" @change="fetchTasks">
           <el-option label="用例生成" value="generate_cases" />
@@ -28,6 +31,14 @@
 
     <div class="page-card">
       <el-table :data="filteredTasks" v-loading="loading">
+        <el-table-column type="expand" width="48">
+          <template #default="{ row }">
+            <div class="expand-box">
+              <div class="expand-item"><span>任务参数</span><code>{{ JSON.stringify(row.params || {}, null, 2) }}</code></div>
+              <div class="expand-item"><span>任务结果</span><code>{{ JSON.stringify(row.result || {}, null, 2) }}</code></div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="id" label="任务ID" width="90" />
         <el-table-column label="类型" width="140">
           <template #default="{ row }">{{ typeLabel(row.task_type) }}</template>
@@ -131,7 +142,7 @@ function openBatch(task: TaskJob) {
 
 function fmt(s?: string) {
   if (!s) return '-'
-  return new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(s).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 const typeLabel = (t: string) => ({ generate_cases: '用例生成', reparse_requirement: '需求重解析' } as Record<string, string>)[t] || t
 const statusLabel = (s: string) => ({ queued: '排队中', running: '执行中', success: '成功', failed: '失败', stopped: '已停止' } as Record<string, string>)[s] || s
@@ -140,7 +151,7 @@ const statusType = (s: string) => ({ queued: 'info', running: 'warning', success
 
 <style scoped>
 .task-page { max-width: 1300px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
 .actions { display: flex; gap: 8px; }
 .stats-row { display: flex; gap: 10px; margin-bottom: 12px; }
 .stat {
@@ -155,4 +166,29 @@ const statusType = (s: string) => ({ queued: 'info', running: 'warning', success
 }
 .stat strong { font-size: 18px; }
 .stat span { font-size: 12px; color: var(--text-secondary); }
+.expand-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 8px 4px;
+}
+.expand-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafbff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.expand-item span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.expand-item code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 11px;
+  color: #374151;
+}
 </style>
