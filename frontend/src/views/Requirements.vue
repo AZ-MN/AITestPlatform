@@ -125,7 +125,9 @@
       <div class="points-toolbar">
         <span class="points-count">共 {{ editablePoints.length }} 个需求点</span>
         <div style="display:flex;gap:8px">
+          <el-button size="small" @click="exportXmind">导出XMind(OPML)</el-button>
           <el-button size="small" @click="toggleEditPoints">{{ editingPoints ? '完成编辑' : '编辑需求点' }}</el-button>
+          <el-button v-if="editingPoints" size="small" @click="splitPointsFiner">细粒度拆分</el-button>
           <el-button v-if="editingPoints" size="small" type="primary" :loading="savingPoints" @click="savePoints">保存需求点</el-button>
           <el-button size="small" type="success"
             @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
@@ -321,6 +323,67 @@ function addPoint() {
 
 function removePoint(index: number) {
   editablePoints.value.splice(index, 1)
+}
+
+function splitFragments(text: string) {
+  const normalized = text.replace(/[；;]/g, '。')
+  return normalized
+    .split(/。|\n|，|,|、|并且|同时|以及|或者|或|且/)
+    .map(x => x.trim())
+    .filter(x => x.length >= 8)
+}
+
+function splitPointsFiner() {
+  const result: any[] = []
+  let idx = 1
+  editablePoints.value.forEach((p: any) => {
+    const source = [p.description, ...(Array.isArray(p.rules) ? p.rules : []), p.rulesText]
+      .filter(Boolean)
+      .join('\n')
+    const fragments = splitFragments(source)
+    if (!fragments.length) {
+      result.push({ ...p, id: `REQ-${idx++}` })
+      return
+    }
+    fragments.forEach((frag, i) => {
+      result.push({
+        ...p,
+        id: `REQ-${idx++}`,
+        title: i === 0 ? p.title : `${p.title} - 子场景${i + 1}`,
+        description: frag,
+      })
+    })
+  })
+  editablePoints.value = result
+  ElMessage.success(`已细粒度拆分为 ${result.length} 个需求点`)
+}
+
+function xmlEscape(input: string) {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function exportXmind() {
+  if (!editablePoints.value.length || !currentReq.value) return ElMessage.warning('暂无可导出的需求点')
+  const reqTitle = xmlEscape(currentReq.value.title || '需求梳理')
+  const items = editablePoints.value.map((p: any) => {
+    const title = xmlEscape(`${p.id || ''} ${p.title || ''}`.trim())
+    const desc = xmlEscape(p.description || '')
+    return `<outline text="${title}"><outline text="${desc}" /></outline>`
+  }).join('')
+  const opml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0"><head><title>${reqTitle}</title></head><body><outline text="${reqTitle}">${items}</outline></body></opml>`
+  const blob = new Blob([opml], { type: 'text/xml;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${currentReq.value.title || 'requirement'}.opml`
+  a.click()
+  URL.revokeObjectURL(url)
+  ElMessage.success('已导出OPML，可直接导入XMind')
 }
 
 async function savePoints() {

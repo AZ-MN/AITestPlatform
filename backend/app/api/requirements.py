@@ -173,7 +173,11 @@ async def _parse_req_points(content: str, use_ai: bool, ai_provider: Optional[st
     if use_ai and content.strip():
         try:
             adapter = AIAdapter(provider=ai_provider)
-            user_msg = f"请解析以下需求文档，提取所有需求点：\n\n{content[:15000]}"
+            user_msg = (
+                "请将以下需求文档按最小可测试行为进行细粒度拆分，"
+                "优先提取可直接用于测试用例设计的需求点：\n\n"
+                f"{content[:15000]}"
+            )
             raw = await adapter.chat(SYSTEM_PROMPT_REQ_PARSE, user_msg)
             parsed = parse_ai_json_response(raw)
             if parsed:

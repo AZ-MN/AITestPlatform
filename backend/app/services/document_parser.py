@@ -92,6 +92,11 @@ def extract_requirement_points_with_rules(content: str) -> List[Dict]:
     req_keywords = ["应该", "需要", "必须", "支持", "可以", "允许", "禁止", "不得", "不允许",
                    "shall", "must", "should", "can", "will", "feature", "功能"]
 
+    def split_fragments(text: str) -> List[str]:
+        normalized = re.sub(r"[；;。]", "\n", text)
+        chunks = re.split(r"\n|，|,|、|并且|同时|以及|或者|或|且", normalized)
+        return [c.strip(" -•\t") for c in chunks if c.strip(" -•\t")]
+
     for line in lines:
         line = line.strip()
         if not line:
@@ -111,22 +116,26 @@ def extract_requirement_points_with_rules(content: str) -> List[Dict]:
         if not is_module and len(line) > 10:
             # 判断是否包含需求关键词
             has_keyword = any(kw in line for kw in req_keywords)
-            if has_keyword or (len(line) > 20 and not line.startswith("-") is False):
+            if has_keyword or len(line) > 20:
                 priority = "P1"
                 if any(w in line for w in ["核心", "关键", "必须", "must", "critical", "P0"]):
                     priority = "P0"
                 elif any(w in line for w in ["可选", "建议", "nice", "P2", "低优"]):
                     priority = "P2"
 
-                points.append({
-                    "id": f"REQ-{point_id:03d}",
-                    "title": line[:80],
-                    "description": line,
-                    "priority": priority,
-                    "module": current_module,
-                    "conditions": [],
-                    "rules": []
-                })
-                point_id += 1
+                fragments = split_fragments(line)
+                for frag in fragments:
+                    if len(frag) < 8:
+                        continue
+                    points.append({
+                        "id": f"REQ-{point_id:03d}",
+                        "title": frag[:80],
+                        "description": frag,
+                        "priority": priority,
+                        "module": current_module,
+                        "conditions": [],
+                        "rules": []
+                    })
+                    point_id += 1
 
     return points[:100]  # 限制最多100个需求点（规则方式）

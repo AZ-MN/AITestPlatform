@@ -35,12 +35,13 @@
               <span>所有项目</span>
             </template>
             <el-menu-item
-              v-for="p in projectStore.projects"
+              v-for="p in sidebarProjects"
               :key="p.id"
               :index="`/projects/${p.id}/requirements`"
               @click="selectProject(p)"
             >
               <span class="project-item-label">{{ p.icon }} {{ p.name }}</span>
+              <span v-if="projectStore.current?.id === p.id" class="current-dot"></span>
             </el-menu-item>
           </el-sub-menu>
         </template>
@@ -138,6 +139,11 @@ const collapsed = ref(false)
 const activeMenu = computed(() => route.path)
 const currentProjectId = computed(() => Number(route.params.id || 0))
 const defaultOpeneds = computed(() => currentProjectId.value ? ['project-list', 'project'] : ['project-list'])
+const sidebarProjects = computed(() => {
+  const projects = [...projectStore.projects]
+  projects.sort((a, b) => (b.id === projectStore.current?.id ? 1 : 0) - (a.id === projectStore.current?.id ? 1 : 0))
+  return projects
+})
 
 const breadcrumbs = computed(() => {
   const crumbs = [{ path: '/dashboard', title: '首页' }]
@@ -282,6 +288,15 @@ watch(() => route.params.id, syncCurrentProject)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.current-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #8dd3ff;
+  margin-left: 6px;
+  display: inline-block;
+  vertical-align: middle;
 }
 :deep(.sidebar-menu .el-icon) { font-size: 15px; }
 
