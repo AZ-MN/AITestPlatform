@@ -34,6 +34,9 @@ class TestCaseUpdate(BaseModel):
     expected_results: Optional[List[str]] = None
     remarks: Optional[str] = None
     status: Optional[str] = None
+    exec_status: Optional[str] = None
+    exec_result: Optional[str] = None
+    exec_at: Optional[datetime] = None
 
 
 class TestCaseOut(BaseModel):
@@ -54,6 +57,8 @@ class TestCaseOut(BaseModel):
     ai_generated: int
     generation_batch: Optional[str]
     exec_status: Optional[str]
+    exec_result: Optional[str]
+    exec_at: Optional[datetime]
     rating: Optional[int]
     feedback: Optional[str]
     created_at: datetime

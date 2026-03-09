@@ -73,6 +73,8 @@ export interface TestCase {
   ai_generated: number
   generation_batch?: string
   exec_status?: string
+  exec_result?: string
+  exec_at?: string
   rating?: number
   feedback?: string
   created_at: string

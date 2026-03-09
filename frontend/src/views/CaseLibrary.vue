@@ -82,6 +82,11 @@
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="执行" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="execType(row.exec_status)" size="small">{{ execLabel(row.exec_status) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="viewCase(row)">查看</el-button>
@@ -126,6 +131,32 @@
 
         <div v-if="detailCase.remarks" class="remarks">
           <strong>备注：</strong>{{ detailCase.remarks }}
+        </div>
+
+        <div class="execution-section">
+          <h4>执行与评审流转</h4>
+          <el-form :model="execForm" label-width="80px" size="small">
+            <el-form-item label="用例状态">
+              <el-select v-model="execForm.status" style="width:140px">
+                <el-option label="草稿" value="draft" />
+                <el-option label="待评审" value="pending_review" />
+                <el-option label="已评审" value="reviewed" />
+                <el-option label="已作废" value="deprecated" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="执行结果">
+              <el-select v-model="execForm.exec_status" clearable placeholder="未执行" style="width:140px">
+                <el-option label="通过" value="passed" />
+                <el-option label="失败" value="failed" />
+                <el-option label="阻塞" value="blocked" />
+                <el-option label="跳过" value="skipped" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="执行记录">
+              <el-input v-model="execForm.exec_result" type="textarea" :rows="2" placeholder="记录执行现象、环境、日志要点..." />
+            </el-form-item>
+          </el-form>
+          <el-button type="primary" size="small" :loading="savingExec" @click="saveExecution">保存执行结果</el-button>
         </div>
 
         <!-- 评分 -->
@@ -235,8 +266,14 @@ const detailCase = ref<TestCase | null>(null)
 const ratingVal = ref(0)
 const exporting = ref(false)
 const saving = ref(false)
+const savingExec = ref(false)
 const exportFmt = ref('excel')
 const exportScope = ref('all')
+const execForm = reactive({
+  status: 'draft',
+  exec_status: '',
+  exec_result: '',
+})
 const caseForm = reactive({
   id: undefined as number | undefined,
   title: '',
@@ -287,6 +324,9 @@ function resetFilters() {
 function viewCase(c: TestCase) {
   detailCase.value = c
   ratingVal.value = c.rating || 0
+  execForm.status = c.status || 'draft'
+  execForm.exec_status = c.exec_status || ''
+  execForm.exec_result = c.exec_result || ''
   showDetail.value = true
 }
 
@@ -367,6 +407,26 @@ async function submitRating() {
   ElMessage.success('评分已提交，感谢反馈')
 }
 
+async function saveExecution() {
+  if (!detailCase.value) return
+  savingExec.value = true
+  try {
+    const payload = {
+      status: execForm.status,
+      exec_status: execForm.exec_status || undefined,
+      exec_result: execForm.exec_result.trim() || undefined,
+      exec_at: execForm.exec_status ? new Date().toISOString() : undefined,
+    }
+    const updated = await caseApi.update(detailCase.value.id, payload)
+    detailCase.value = updated
+    const idx = cases.value.findIndex(c => c.id === updated.id)
+    if (idx >= 0) cases.value[idx] = updated
+    ElMessage.success('执行结果已保存')
+  } finally {
+    savingExec.value = false
+  }
+}
+
 async function handleExport() {
   exporting.value = true
   try {
@@ -403,6 +463,10 @@ const statusType = (s: string): TagProps['type'] => {
   }
   return map[s] || 'info'
 }
+const execLabel = (s?: string) =>
+  ({ passed: '通过', failed: '失败', blocked: '阻塞', skipped: '跳过' } as Record<string, string>)[s || ''] || '未执行'
+const execType = (s?: string): TagProps['type'] =>
+  ({ passed: 'success', failed: 'danger', blocked: 'warning', skipped: 'info' } as Record<string, TagProps['type']>)[s || ''] || 'info'
 
 function clearBatchFilter() {
   const query = { ...route.query }
@@ -442,5 +506,7 @@ function clearBatchFilter() {
 .step-action { font-size: 13px; margin-bottom: 3px; }
 .step-expected { font-size: 12px; color: #059669; background: #f0fdf4; border-radius: 4px; padding: 3px 8px; }
 .remarks { margin-top: 12px; font-size: 13px; color: var(--text-secondary); background: #f9fafb; border-radius: 6px; padding: 8px; }
+.execution-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.execution-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
 .rating-section { margin-top: 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; border-top: 1px solid var(--border); padding-top: 12px; }
 </style>
