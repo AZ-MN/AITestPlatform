@@ -11,6 +11,7 @@
 
       <el-menu
         :default-active="activeMenu"
+        :default-openeds="defaultOpeneds"
         :collapse="collapsed"
         :collapse-transition="false"
         router
@@ -25,6 +26,24 @@
           <el-icon><Folder /></el-icon>
           <template #title>项目管理</template>
         </el-menu-item>
+
+        <template v-if="projectStore.projects.length">
+          <div v-if="!collapsed" class="menu-section-title">项目导航</div>
+          <el-sub-menu index="project-list" class="project-list-sub-menu">
+            <template #title>
+              <el-icon><Collection /></el-icon>
+              <span>所有项目</span>
+            </template>
+            <el-menu-item
+              v-for="p in projectStore.projects"
+              :key="p.id"
+              :index="`/projects/${p.id}/requirements`"
+              @click="selectProject(p)"
+            >
+              <span class="project-item-label">{{ p.icon }} {{ p.name }}</span>
+            </el-menu-item>
+          </el-sub-menu>
+        </template>
 
         <template v-if="projectStore.current">
           <div v-if="!collapsed" class="menu-section-title">当前项目</div>
@@ -103,11 +122,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { ElMessageBox } from 'element-plus'
+import type { Project } from '@/api/types'
 
 const auth = useAuthStore()
 const projectStore = useProjectStore()
@@ -116,6 +136,8 @@ const router = useRouter()
 const collapsed = ref(false)
 
 const activeMenu = computed(() => route.path)
+const currentProjectId = computed(() => Number(route.params.id || 0))
+const defaultOpeneds = computed(() => currentProjectId.value ? ['project-list', 'project'] : ['project-list'])
 
 const breadcrumbs = computed(() => {
   const crumbs = [{ path: '/dashboard', title: '首页' }]
@@ -142,6 +164,28 @@ async function handleCommand(cmd: string) {
     router.push('/profile')
   }
 }
+
+function selectProject(p: Project) {
+  projectStore.setCurrent(p)
+}
+
+async function hydrateSidebarProjects() {
+  if (!projectStore.projects.length) await projectStore.fetchProjects()
+}
+
+function syncCurrentProject() {
+  const id = currentProjectId.value
+  if (!id) return
+  const matched = projectStore.projects.find(p => p.id === id)
+  if (matched) projectStore.setCurrent(matched)
+}
+
+onMounted(async () => {
+  await hydrateSidebarProjects()
+  syncCurrentProject()
+})
+
+watch(() => route.params.id, syncCurrentProject)
 </script>
 
 <style scoped>
@@ -226,6 +270,18 @@ async function handleCommand(cmd: string) {
   padding: 4px;
   border-radius: 10px;
   background: rgba(255,255,255,.04) !important;
+}
+:deep(.project-list-sub-menu .el-menu--inline) {
+  margin: 2px 0 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.03) !important;
+}
+.project-item-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 :deep(.sidebar-menu .el-icon) { font-size: 15px; }
 
