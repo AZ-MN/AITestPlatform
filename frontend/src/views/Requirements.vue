@@ -75,6 +75,12 @@
         <el-form-item label="AI解析">
           <el-switch v-model="uploadForm.useAi" active-text="AI智能解析需求点" inactive-text="规则解析" />
         </el-form-item>
+        <el-form-item v-if="uploadForm.useAi" label="AI模型">
+          <el-select v-model="uploadForm.aiProvider" placeholder="选择模型供应商" style="width:100%">
+            <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
+              :label="`${m.provider} · ${m.model_name}${m.is_default ? '（默认）' : ''}`" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showUpload = false">取消</el-button>
@@ -94,6 +100,12 @@
         </el-form-item>
         <el-form-item label="AI解析">
           <el-switch v-model="textForm.useAi" active-text="AI智能解析需求点" />
+        </el-form-item>
+        <el-form-item v-if="textForm.useAi" label="AI模型">
+          <el-select v-model="textForm.aiProvider" placeholder="选择模型供应商" style="width:100%">
+            <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
+              :label="`${m.provider} · ${m.model_name}${m.is_default ? '（默认）' : ''}`" />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -135,7 +147,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { Plus, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
-import type { Requirement, RequirementPoint } from '@/api/types'
+import { modelApi } from '@/api/models'
+import type { Requirement, RequirementPoint, AIModelConfig } from '@/api/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,11 +163,23 @@ const showPoints = ref(false)
 const currentReq = ref<Requirement | null>(null)
 const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
 const uploadFile = ref<File | null>(null)
+const modelConfigs = ref<AIModelConfig[]>([])
 
-const uploadForm = reactive({ title: '', useAi: true })
-const textForm = reactive({ title: '', content: '', useAi: true })
+const uploadForm = reactive({ title: '', useAi: true, aiProvider: '' })
+const textForm = reactive({ title: '', content: '', useAi: true, aiProvider: '' })
 
-onMounted(fetchReqs)
+onMounted(async () => {
+  await Promise.all([fetchReqs(), fetchModels()])
+})
+
+async function fetchModels() {
+  modelConfigs.value = await modelApi.list()
+  const def = modelConfigs.value.find(m => m.is_default) || modelConfigs.value[0]
+  if (def) {
+    uploadForm.aiProvider = def.provider
+    textForm.aiProvider = def.provider
+  }
+}
 
 async function fetchReqs() {
   loading.value = true
@@ -174,11 +199,16 @@ async function handleUpload() {
   fd.append('project_id', String(projectId.value))
   fd.append('title', uploadForm.title)
   fd.append('use_ai', String(uploadForm.useAi))
+  if (uploadForm.useAi) {
+    if (!uploadForm.aiProvider) return ElMessage.warning('请先选择AI模型供应商')
+    fd.append('ai_provider', uploadForm.aiProvider)
+  }
   try {
     await requirementApi.upload(fd)
     ElMessage.success('上传解析成功')
     showUpload.value = false
     uploadForm.title = ''
+    uploadForm.aiProvider = uploadForm.aiProvider || (modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || '')
     uploadFile.value = null
     fetchReqs()
   } finally { uploading.value = false }
@@ -186,15 +216,23 @@ async function handleUpload() {
 
 async function handleTextSave() {
   if (!textForm.title) return ElMessage.warning('请输入需求标题')
+  if (!textForm.content.trim()) return ElMessage.warning('请输入需求内容')
+  if (textForm.useAi && !textForm.aiProvider) return ElMessage.warning('请先选择AI模型供应商')
   saving.value = true
   try {
     await requirementApi.createText(
       { project_id: projectId.value, title: textForm.title, content: textForm.content },
-      textForm.useAi
+      textForm.useAi,
+      textForm.useAi ? textForm.aiProvider : undefined
     )
     ElMessage.success('需求解析成功')
     showText.value = false
-    Object.assign(textForm, { title: '', content: '', useAi: true })
+    Object.assign(textForm, {
+      title: '',
+      content: '',
+      useAi: true,
+      aiProvider: textForm.aiProvider || (modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || '')
+    })
     fetchReqs()
   } finally { saving.value = false }
 }
