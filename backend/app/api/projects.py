@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -86,7 +87,7 @@ async def update_project(
     return _enrich_project(proj, db)
 
 
-@router.delete("/{project_id}", summary="删除/归档项目")
+@router.delete("/{project_id}", summary="删除项目")
 async def delete_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
@@ -95,9 +96,23 @@ async def delete_project(
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         raise HTTPException(status_code=404, detail="项目不存在")
-    proj.status = "archived"
+
+    # 先清理项目下的文件型需求附件，避免遗留垃圾文件
+    reqs = db.query(Requirement).filter(Requirement.project_id == project_id).all()
+    for req in reqs:
+        if req.source_file and os.path.exists(req.source_file):
+            try:
+                os.remove(req.source_file)
+            except OSError:
+                pass
+
+    # 再删除关联数据，最后删除项目本身
+    db.query(TestCase).filter(TestCase.project_id == project_id).delete(synchronize_session=False)
+    db.query(Requirement).filter(Requirement.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
+    db.delete(proj)
     db.commit()
-    return {"message": "项目已归档"}
+    return {"message": "项目已删除"}
 
 
 @router.get("/{project_id}/members", summary="获取项目成员")
