@@ -80,6 +80,9 @@
             <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
               :label="`${m.provider} · ${m.model_name}${m.is_default ? '（默认）' : ''}`" />
           </el-select>
+          <div v-if="!modelConfigs.length" class="form-tip">
+            未检测到可用模型，请先到「模型设置」添加配置。
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -106,6 +109,9 @@
             <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
               :label="`${m.provider} · ${m.model_name}${m.is_default ? '（默认）' : ''}`" />
           </el-select>
+          <div v-if="!modelConfigs.length" class="form-tip">
+            未检测到可用模型，请先到「模型设置」添加配置。
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -193,16 +199,16 @@ function onFileChange(file: any) { uploadFile.value = file.raw }
 async function handleUpload() {
   if (!uploadFile.value) return ElMessage.warning('请选择文件')
   if (!uploadForm.title) return ElMessage.warning('请输入需求标题')
+  if (uploadForm.useAi) {
+    if (!uploadForm.aiProvider) return ElMessage.warning('请先选择AI模型供应商')
+  }
   uploading.value = true
   const fd = new FormData()
   fd.append('file', uploadFile.value)
   fd.append('project_id', String(projectId.value))
   fd.append('title', uploadForm.title)
   fd.append('use_ai', String(uploadForm.useAi))
-  if (uploadForm.useAi) {
-    if (!uploadForm.aiProvider) return ElMessage.warning('请先选择AI模型供应商')
-    fd.append('ai_provider', uploadForm.aiProvider)
-  }
+  if (uploadForm.useAi) fd.append('ai_provider', uploadForm.aiProvider)
   try {
     await requirementApi.upload(fd)
     ElMessage.success('上传解析成功')
@@ -278,4 +284,5 @@ function fmtDate(s: string) {
 .point-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .point-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .rule-tag { font-size: 11px; background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 4px; }
+.form-tip { margin-top: 6px; font-size: 12px; color: #9ca3af; }
 </style>
