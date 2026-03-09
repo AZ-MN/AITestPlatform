@@ -29,6 +29,7 @@ const router = createRouter({
           ]
         },
         { path: 'settings',  name: 'Settings',     component: () => import('@/views/Settings.vue') },
+        { path: 'tasks',     name: 'TaskCenter',   component: () => import('@/views/TaskCenter.vue') },
         { path: 'profile',   name: 'Profile',      component: () => import('@/views/Profile.vue') },
       ]
     },

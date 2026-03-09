@@ -115,3 +115,22 @@ export interface PageResult<T> {
   page_size: number
   items: T[]
 }
+
+export interface TaskJob {
+  id: number
+  task_type: string
+  status: string
+  progress: number
+  message?: string
+  error?: string
+  params?: Record<string, any>
+  result?: Record<string, any>
+  cancel_requested: number
+  project_id?: number
+  requirement_id?: number
+  created_by: number
+  created_at: string
+  started_at?: string
+  finished_at?: string
+  queue_position?: number
+}

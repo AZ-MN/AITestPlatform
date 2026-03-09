@@ -133,8 +133,8 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
-import { caseApi } from '@/api/cases'
 import { modelApi } from '@/api/models'
+import { taskApi } from '@/api/tasks'
 import type { Requirement, RequirementPoint, AIModelConfig } from '@/api/types'
 
 const route = useRoute()
@@ -219,9 +219,9 @@ async function handleGenerate() {
       custom_instructions: config.custom_instructions,
       module_filter: config.module_filter,
     }
-    const result: any = await caseApi.generate(payload)
-    lastResult.value = result
-    ElMessage.success(`生成完成，共 ${result.total} 条用例`)
+    const task = await taskApi.createGenerate(payload)
+    ElMessage.success(`生成任务已入队（任务ID: ${task.id}）`)
+    router.push(`/tasks?project_id=${projectId.value}`)
   } catch (e: any) {
     // error handled by interceptor
   } finally {

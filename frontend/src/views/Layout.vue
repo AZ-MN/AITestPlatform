@@ -43,6 +43,10 @@
         </template>
 
         <div v-if="!collapsed" class="menu-section-title">系统设置</div>
+        <el-menu-item index="/tasks">
+          <el-icon><Clock /></el-icon>
+          <template #title>任务中心</template>
+        </el-menu-item>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
           <template #title>模型设置</template>
@@ -156,6 +160,8 @@ const breadcrumbs = computed(() => {
     crumbs.push({ path: '', title: '项目管理' })
   } else if (route.path === '/settings') {
     crumbs.push({ path: '', title: '模型设置' })
+  } else if (route.path === '/tasks') {
+    crumbs.push({ path: '', title: '任务中心' })
   }
   return crumbs
 })

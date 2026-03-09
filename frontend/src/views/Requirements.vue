@@ -231,6 +231,7 @@ import { Plus, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import { modelApi } from '@/api/models'
+import { taskApi } from '@/api/tasks'
 import type { Requirement, RequirementPoint, AIModelConfig } from '@/api/types'
 
 const route = useRoute()
@@ -407,19 +408,14 @@ async function handleReparse() {
   reparsing.value = true
   reparsingId.value = reparseTarget.value.id
   try {
-    const updated = await requirementApi.reparse(reparseTarget.value.id, {
+    await taskApi.createReparse({
+      requirement_id: reparseTarget.value.id,
       use_ai: reparseForm.useAi,
       ai_provider: reparseForm.useAi ? reparseForm.aiProvider : undefined,
       parse_prompt: reparseForm.parsePrompt.trim() || undefined,
     })
-    const idx = requirements.value.findIndex(r => r.id === updated.id)
-    if (idx >= 0) requirements.value[idx] = updated
-    if (currentReq.value?.id === updated.id) {
-      currentReq.value = updated
-      editablePoints.value = normalizePoints(updated.parse_result || [])
-    }
     showReparse.value = false
-    ElMessage.success('重新解析完成')
+    ElMessage.success('重解析任务已入队，请到任务中心查看进度')
   } finally {
     reparsing.value = false
     reparsingId.value = undefined

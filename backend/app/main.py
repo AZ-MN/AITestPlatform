@@ -12,8 +12,9 @@ from app.models.user import User          # noqa: F401
 from app.models.project import Project, ProjectMember  # noqa: F401
 from app.models.requirement import Requirement         # noqa: F401
 from app.models.testcase import TestCase, AIModelConfig  # noqa: F401
+from app.models.task_job import TaskJob  # noqa: F401
 
-from app.api import auth, projects, requirements, cases, models as models_api
+from app.api import auth, projects, requirements, cases, models as models_api, tasks
 
 
 @asynccontextmanager
@@ -80,6 +81,7 @@ app.include_router(projects.router,     prefix="/api/v1")
 app.include_router(requirements.router, prefix="/api/v1")
 app.include_router(cases.router,        prefix="/api/v1")
 app.include_router(models_api.router,   prefix="/api/v1")
+app.include_router(tasks.router,        prefix="/api/v1")
 
 
 @app.get("/api/v1/health", tags=["系统"])
