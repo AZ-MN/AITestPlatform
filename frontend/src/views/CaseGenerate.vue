@@ -25,6 +25,15 @@
               <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
             </el-select>
           </div>
+          <div class="module-filter-row">
+            <span>优先级：</span>
+            <el-select v-model="config.priority_filter" placeholder="全部优先级" clearable size="small" style="flex:1">
+              <el-option label="P0 核心" value="P0" />
+              <el-option label="P1 高优" value="P1" />
+              <el-option label="P2 中优" value="P2" />
+              <el-option label="P3 低优" value="P3" />
+            </el-select>
+          </div>
         </div>
 
         <!-- 生成类型 -->
@@ -33,7 +42,11 @@
           <el-radio-button value="functional">功能测试</el-radio-button>
           <el-radio-button value="api">接口测试</el-radio-button>
           <el-radio-button value="unit">单元测试</el-radio-button>
+          <el-radio-button value="regression">回归测试</el-radio-button>
         </el-radio-group>
+        <div class="quick-actions">
+          <el-button size="small" @click="applyRegressionPreset">回归最小集模板</el-button>
+        </div>
 
         <!-- 颗粒度 -->
         <div class="section-label">用例颗粒度</div>
@@ -137,6 +150,7 @@ const config = reactive({
   requirement_id: undefined as number | undefined,
   test_type: 'functional',
   granularity: 'medium',
+  priority_filter: undefined as string | undefined,
   cover_scenarios: ['normal', 'exception', 'boundary'],
   ai_provider: undefined as string | undefined,
   temperature: 0.3,
@@ -154,8 +168,11 @@ const modules = computed(() => {
 })
 
 const filteredPoints = computed(() => {
-  if (!config.module_filter) return reqPoints.value
-  return reqPoints.value.filter(p => p.module === config.module_filter)
+  return reqPoints.value.filter(p => {
+    const moduleOk = !config.module_filter || p.module === config.module_filter
+    const priorityOk = !config.priority_filter || p.priority === config.priority_filter
+    return moduleOk && priorityOk
+  })
 })
 
 const tempMarks = { 0: '严谨', 0.5: '均衡', 1: '发散' }
@@ -177,6 +194,7 @@ onMounted(async () => {
 
 async function onReqChange(id?: number) {
   config.module_filter = undefined
+  config.priority_filter = undefined
   if (!id) { reqPoints.value = []; return }
   const req = await requirementApi.get(id)
   reqPoints.value = (req.parse_result as RequirementPoint[]) || []
@@ -194,6 +212,7 @@ async function handleGenerate() {
       req_points: filteredPoints.value,
       test_type: config.test_type,
       granularity: config.granularity,
+      priority_filter: config.priority_filter,
       cover_scenarios: config.cover_scenarios,
       ai_provider: config.ai_provider,
       temperature: config.temperature,
@@ -216,6 +235,14 @@ function providerName(p: string): string {
     zhipu: '智谱GLM', deepseek: 'DeepSeek'
   }
   return map[p] || p
+}
+
+function applyRegressionPreset() {
+  config.test_type = 'regression'
+  config.granularity = 'coarse'
+  config.priority_filter = 'P0'
+  config.cover_scenarios = ['normal', 'exception', 'boundary']
+  ElMessage.success('已应用回归最小集模板（P0 + 核心场景）')
 }
 </script>
 
@@ -258,6 +285,7 @@ function providerName(p: string): string {
 .type-group { width: 100%; display: flex; }
 .type-group :deep(.el-radio-button) { flex: 1; }
 .type-group :deep(.el-radio-button__inner) { width: 100%; }
+.quick-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
 
 .scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 

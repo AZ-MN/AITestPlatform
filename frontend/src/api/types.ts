@@ -101,6 +101,7 @@ export interface GenerateRequest {
   req_points?: RequirementPoint[]
   test_type?: string
   granularity?: string
+  priority_filter?: string
   cover_scenarios?: string[]
   ai_provider?: string
   temperature?: number
