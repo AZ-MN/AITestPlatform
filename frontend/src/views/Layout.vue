@@ -26,25 +26,29 @@
           <template #title>项目管理</template>
         </el-menu-item>
 
-        <el-sub-menu v-if="projectStore.current" index="project">
-          <template #title>
-            <el-icon><Files /></el-icon>
-            <span>{{ projectStore.current.icon }} {{ projectStore.current.name }}</span>
-          </template>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/requirements`">
-            <el-icon><Document /></el-icon>
-            <template #title>需求管理</template>
-          </el-menu-item>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/generate`">
-            <el-icon><MagicStick /></el-icon>
-            <template #title>智能生成</template>
-          </el-menu-item>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/cases`">
-            <el-icon><List /></el-icon>
-            <template #title>用例库</template>
-          </el-menu-item>
-        </el-sub-menu>
+        <template v-if="projectStore.current">
+          <div v-if="!collapsed" class="menu-section-title">当前项目</div>
+          <el-sub-menu index="project" class="project-sub-menu">
+            <template #title>
+              <el-icon><Files /></el-icon>
+              <span>{{ projectStore.current.icon }} {{ projectStore.current.name }}</span>
+            </template>
+            <el-menu-item :index="`/projects/${projectStore.current.id}/requirements`">
+              <el-icon><Document /></el-icon>
+              <template #title>需求管理</template>
+            </el-menu-item>
+            <el-menu-item :index="`/projects/${projectStore.current.id}/generate`">
+              <el-icon><MagicStick /></el-icon>
+              <template #title>智能生成</template>
+            </el-menu-item>
+            <el-menu-item :index="`/projects/${projectStore.current.id}/cases`">
+              <el-icon><List /></el-icon>
+              <template #title>用例库</template>
+            </el-menu-item>
+          </el-sub-menu>
+        </template>
 
+        <div v-if="!collapsed" class="menu-section-title">系统设置</div>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
           <template #title>模型设置</template>
@@ -144,28 +148,46 @@ async function handleCommand(cmd: string) {
 .app-layout { height: 100vh; overflow: hidden; }
 
 .sidebar {
-  background: #1a1c2e;
+  background: linear-gradient(180deg, #13182b 0%, #171d35 42%, #111629 100%);
   display: flex;
   flex-direction: column;
-  transition: width .2s;
+  transition: width .24s ease;
   overflow: hidden;
+  box-shadow: 8px 0 24px rgba(10, 16, 38, .18);
 }
 .sidebar-header {
-  height: 56px;
+  height: 62px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 0 14px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   flex-shrink: 0;
 }
-.logo-icon { font-size: 24px; flex-shrink: 0; }
-.logo-text { color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #58c1ff 0%, #5c7cfa 100%);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(92,124,250,.35);
+  flex-shrink: 0;
+}
+.logo-text { color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; letter-spacing: .2px; }
 
-.sidebar-menu { border: none; background: transparent; flex: 1; overflow-y: auto; }
+.sidebar-menu { border: none; background: transparent; flex: 1; overflow-y: auto; padding: 10px 8px; }
+.menu-section-title {
+  font-size: 11px;
+  color: rgba(255,255,255,.45);
+  margin: 10px 12px 6px;
+  letter-spacing: .6px;
+}
 :deep(.sidebar-menu.el-menu) {
   --el-menu-bg-color: transparent;
-  --el-menu-hover-bg-color: rgba(255,255,255,.08);
+  --el-menu-hover-bg-color: rgba(108, 127, 255, .16);
   --el-menu-text-color: rgba(255,255,255,.72);
   --el-menu-active-color: #fff;
   border-right: none;
@@ -178,21 +200,34 @@ async function handleCommand(cmd: string) {
 }
 :deep(.el-menu-item), :deep(.el-sub-menu__title) {
   color: rgba(255,255,255,.7) !important;
-  border-radius: 8px;
-  margin: 2px 8px;
+  border-radius: 10px;
+  margin: 4px 2px;
+  height: 42px;
+  line-height: 42px;
+  transition: all .18s ease;
+  font-weight: 500;
 }
 :deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) {
-  background: rgba(255,255,255,.08) !important;
+  background: rgba(108, 127, 255, .16) !important;
   color: #fff !important;
+  transform: translateX(2px);
 }
 :deep(.el-menu-item.is-active) {
-  background: #4f6ef7 !important;
+  background: linear-gradient(90deg, #4f6ef7 0%, #6384ff 100%) !important;
   color: #fff !important;
+  box-shadow: 0 8px 18px rgba(79, 110, 247, .35);
 }
 :deep(.el-sub-menu.is-active > .el-sub-menu__title) {
   color: #fff !important;
 }
 :deep(.el-sub-menu .el-menu-item) { padding-left: 44px !important; }
+:deep(.project-sub-menu .el-menu--inline) {
+  margin: 2px 0 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.04) !important;
+}
+:deep(.sidebar-menu .el-icon) { font-size: 15px; }
 
 .sidebar-footer {
   padding: 12px;
@@ -201,12 +236,18 @@ async function handleCommand(cmd: string) {
   justify-content: flex-end;
 }
 .collapse-btn {
-  color: rgba(255,255,255,.5);
+  color: rgba(255,255,255,.7);
   cursor: pointer;
   font-size: 18px;
-  padding: 4px;
+  padding: 7px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.06);
+  transition: all .18s ease;
 }
-.collapse-btn:hover { color: #fff; }
+.collapse-btn:hover {
+  color: #fff;
+  background: rgba(108, 127, 255, .3);
+}
 
 .main-container { overflow: hidden; }
 
