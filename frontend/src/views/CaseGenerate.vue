@@ -2,6 +2,7 @@
   <div class="generate-page">
     <div class="page-header">
       <h2>智能生成测试用例</h2>
+      <p>从已解析需求中快速生成高质量测试用例，支持按模块与场景精细控制。</p>
     </div>
 
     <div class="generate-layout">
@@ -70,8 +71,8 @@
         <el-input v-model="config.custom_instructions" type="textarea" :rows="2"
           placeholder="如：重点关注支付流程、用例需包含并发场景..." />
 
-        <el-button type="primary" size="large" :loading="generating" :disabled="!canGenerate"
-          style="width:100%;margin-top:20px" @click="handleGenerate">
+        <el-button type="primary" size="large" class="generate-btn" :loading="generating" :disabled="!canGenerate"
+          @click="handleGenerate">
           <el-icon v-if="!generating"><MagicStick /></el-icon>
           {{ generating ? 'AI 生成中...' : '开始生成' }}
         </el-button>
@@ -95,7 +96,9 @@
           <span class="preview-count">{{ filteredPoints.length }} 个</span>
         </div>
         <div v-if="!filteredPoints.length" class="preview-empty">
+          <div class="preview-empty-icon">🧩</div>
           <p>请先在左侧选择需求来源</p>
+          <span>加载后可按模块筛选并实时预览生成范围</span>
         </div>
         <div v-else class="preview-list">
           <div v-for="(p, i) in filteredPoints" :key="i" class="req-point">
@@ -217,16 +220,37 @@ function providerName(p: string): string {
 </script>
 
 <style scoped>
-.generate-page { max-width: 1300px; }
-.page-header { margin-bottom: 20px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
+.generate-page {
+  max-width: 1320px;
+  padding: 6px;
+}
+.page-header {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.page-header h2 { font-size: 26px; font-weight: 700; letter-spacing: .3px; }
+.page-header p { font-size: 13px; color: var(--text-secondary); }
 
-.generate-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+.generate-layout { display: grid; grid-template-columns: 400px 1fr; gap: 16px; align-items: start; }
 
-.config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.config-panel,
+.preview-panel {
+  border-radius: 14px;
+  border-color: #e8ebf5;
+  box-shadow: 0 10px 30px rgba(31, 41, 55, .06);
+}
+
+.config-panel {
+  position: sticky;
+  top: 8px;
+}
+
+.config-panel h3, .preview-panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
 .section-label {
   font-size: 13px; font-weight: 500; color: var(--text-secondary);
-  margin: 16px 0 8px;
+  margin: 14px 0 8px;
   display: flex; align-items: center; gap: 8px;
 }
 .temp-val { color: #4f6ef7; font-weight: 700; }
@@ -235,21 +259,55 @@ function providerName(p: string): string {
 .type-group :deep(.el-radio-button) { flex: 1; }
 .type-group :deep(.el-radio-button__inner) { width: 100%; }
 
-.scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-.req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
+.req-summary {
+  background: linear-gradient(180deg, #f7f9ff 0%, #f4f7ff 100%);
+  border: 1px solid #e6ebff;
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+}
 .module-filter-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 
 .result-summary { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+.generate-btn { width: 100%; margin-top: 18px; height: 44px; font-weight: 600; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.preview-count { font-size: 13px; color: var(--text-secondary); }
-.preview-empty { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
-.preview-list { max-height: calc(100vh - 200px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.preview-count {
+  font-size: 12px;
+  color: #4f6ef7;
+  background: #eef2ff;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.preview-empty {
+  text-align: center;
+  padding: 52px 24px;
+  color: #9ca3af;
+  font-size: 14px;
+  border: 1px dashed #d8dcef;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+.preview-empty-icon { font-size: 28px; margin-bottom: 10px; }
+.preview-empty span { font-size: 12px; margin-top: 6px; display: inline-block; color: #a1a8bd; }
+.preview-list { max-height: calc(100vh - 210px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
 
-.req-point { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.req-point {
+  border: 1px solid #e8ebf5;
+  border-radius: 10px;
+  padding: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+}
 .rp-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.rp-id { font-size: 11px; font-family: monospace; color: #9ca3af; }
+.rp-id { font-size: 11px; font-family: monospace; color: #6b7280; font-weight: 600; }
 .rp-module { font-size: 11px; color: #9ca3af; }
-.rp-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
+.rp-title { font-size: 13px; font-weight: 600; line-height: 1.4; color: #1f2937; }
+
+@media (max-width: 1200px) {
+  .generate-layout { grid-template-columns: 1fr; }
+  .config-panel { position: static; }
+  .preview-list { max-height: 520px; }
+}
 </style>
