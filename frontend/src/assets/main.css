@@ -1,0 +1,49 @@
+/* 全局样式 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #4f6ef7;
+  --primary-light: #eef0fe;
+  --sidebar-width: 220px;
+  --header-height: 56px;
+  --bg: #f5f7fa;
+  --card-bg: #ffffff;
+  --border: #e6e8f0;
+  --text-primary: #1a1c2e;
+  --text-secondary: #6b7280;
+}
+
+html, body, #app {
+  height: 100%;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d0d5e8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a0a8c8; }
+
+/* 卡片 */
+.page-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+}
+
+/* 优先级标签 */
+.tag-p0 { background: #fff0f0; color: #e03030; border-color: #ffcdcd; }
+.tag-p1 { background: #fff7e6; color: #d97706; border-color: #fde8b0; }
+.tag-p2 { background: #fffbeb; color: #ca8a04; border-color: #fef3c7; }
+.tag-p3 { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+
+/* 状态标签 */
+.status-draft       { background: #f3f4f6; color: #6b7280; }
+.status-reviewed    { background: #ecfdf5; color: #059669; }
+.status-deprecated  { background: #fef2f2; color: #dc2626; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity .2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
