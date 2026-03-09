@@ -123,25 +123,54 @@
     <!-- 需求点查看弹窗 -->
     <el-dialog v-model="showPoints" :title="`需求点 - ${currentReq?.title}`" width="760px" top="5vh">
       <div class="points-toolbar">
-        <span class="points-count">共 {{ currentPoints.length }} 个需求点</span>
-        <el-button size="small" type="success"
-          @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
-          生成测试用例 →
-        </el-button>
+        <span class="points-count">共 {{ editablePoints.length }} 个需求点</span>
+        <div style="display:flex;gap:8px">
+          <el-button size="small" @click="toggleEditPoints">{{ editingPoints ? '完成编辑' : '编辑需求点' }}</el-button>
+          <el-button v-if="editingPoints" size="small" type="primary" :loading="savingPoints" @click="savePoints">保存需求点</el-button>
+          <el-button size="small" type="success"
+            @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
+            生成测试用例 →
+          </el-button>
+        </div>
       </div>
       <div class="points-list">
-        <div v-for="(p, i) in currentPoints" :key="i" class="point-item">
+        <div v-for="(p, i) in editablePoints" :key="i" class="point-item">
           <div class="point-header">
-            <span class="point-id">{{ p.id || `REQ-${i+1}` }}</span>
-            <el-tag :class="`tag-${p.priority?.toLowerCase()}`" size="small">{{ p.priority }}</el-tag>
-            <span class="point-module">{{ p.module }}</span>
+            <template v-if="editingPoints">
+              <el-input v-model="p.id" size="small" placeholder="需求ID" style="width:140px" />
+              <el-select v-model="p.priority" size="small" style="width:110px">
+                <el-option label="P0" value="P0" />
+                <el-option label="P1" value="P1" />
+                <el-option label="P2" value="P2" />
+                <el-option label="P3" value="P3" />
+              </el-select>
+              <el-input v-model="p.module" size="small" placeholder="模块" style="width:160px" />
+            </template>
+            <template v-else>
+              <span class="point-id">{{ p.id || `REQ-${i+1}` }}</span>
+              <el-tag :class="`tag-${p.priority?.toLowerCase()}`" size="small">{{ p.priority }}</el-tag>
+              <span class="point-module">{{ p.module }}</span>
+            </template>
           </div>
-          <div class="point-title">{{ p.title }}</div>
-          <div class="point-desc">{{ p.description }}</div>
-          <div v-if="p.rules?.length" class="point-rules">
-            <span v-for="r in p.rules" :key="r" class="rule-tag">{{ r }}</span>
+          <template v-if="editingPoints">
+            <el-input v-model="p.title" placeholder="需求点标题" style="margin-bottom:8px" />
+            <el-input v-model="p.description" type="textarea" :rows="2" placeholder="需求点描述" />
+            <el-input v-model="p.rulesText" type="textarea" :rows="2" placeholder="规则（每行一条）" style="margin-top:8px" />
+          </template>
+          <template v-else>
+            <div class="point-title">{{ p.title }}</div>
+            <div class="point-desc">{{ p.description }}</div>
+            <div v-if="p.rules?.length" class="point-rules">
+              <span v-for="r in p.rules" :key="r" class="rule-tag">{{ r }}</span>
+            </div>
+          </template>
+          <div v-if="editingPoints" style="margin-top:8px">
+            <el-button size="small" type="danger" link @click="removePoint(i)">删除该需求点</el-button>
           </div>
         </div>
+      </div>
+      <div v-if="editingPoints" style="margin-top:10px">
+        <el-button size="small" @click="addPoint">+ 新增需求点</el-button>
       </div>
     </el-dialog>
   </div>
@@ -168,6 +197,9 @@ const showText = ref(false)
 const showPoints = ref(false)
 const currentReq = ref<Requirement | null>(null)
 const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
+const editablePoints = ref<any[]>([])
+const editingPoints = ref(false)
+const savingPoints = ref(false)
 const uploadFile = ref<File | null>(null)
 const modelConfigs = ref<AIModelConfig[]>([])
 
@@ -245,7 +277,81 @@ async function handleTextSave() {
 
 function viewReq(req: Requirement) {
   currentReq.value = req
+  editablePoints.value = normalizePoints(req.parse_result || [])
+  editingPoints.value = false
   showPoints.value = true
+}
+
+function toggleEditPoints() {
+  editingPoints.value = !editingPoints.value
+  if (editingPoints.value && !editablePoints.value.length) {
+    editablePoints.value = [newPoint(1)]
+  }
+}
+
+function newPoint(index: number) {
+  return {
+    id: `REQ-${index}`,
+    title: '',
+    description: '',
+    priority: 'P1',
+    module: '',
+    conditions: [] as string[],
+    rules: [] as string[],
+    rulesText: '',
+  }
+}
+
+function normalizePoints(points: RequirementPoint[]) {
+  return (points || []).map((p, i) => ({
+    id: p.id || `REQ-${i + 1}`,
+    title: p.title || '',
+    description: p.description || '',
+    priority: p.priority || 'P1',
+    module: p.module || '',
+    conditions: Array.isArray(p.conditions) ? p.conditions : [],
+    rules: Array.isArray(p.rules) ? p.rules : [],
+    rulesText: Array.isArray(p.rules) ? p.rules.join('\n') : '',
+  }))
+}
+
+function addPoint() {
+  editablePoints.value.push(newPoint(editablePoints.value.length + 1))
+}
+
+function removePoint(index: number) {
+  editablePoints.value.splice(index, 1)
+}
+
+async function savePoints() {
+  if (!currentReq.value) return
+  const points = editablePoints.value.map((p, i) => ({
+    id: (p.id || `REQ-${i + 1}`).trim(),
+    title: (p.title || '').trim(),
+    description: (p.description || '').trim(),
+    priority: p.priority || 'P1',
+    module: (p.module || '').trim(),
+    conditions: Array.isArray(p.conditions) ? p.conditions : [],
+    rules: String(p.rulesText || '')
+      .split('\n')
+      .map((x: string) => x.trim())
+      .filter(Boolean),
+  }))
+  if (points.some(p => !p.title || !p.description)) {
+    return ElMessage.warning('请为每个需求点填写标题和描述')
+  }
+  savingPoints.value = true
+  try {
+    const updated = await requirementApi.update(currentReq.value.id, { parse_result: points })
+    currentReq.value = updated
+    const idx = requirements.value.findIndex(r => r.id === updated.id)
+    if (idx >= 0) requirements.value[idx] = updated
+    editablePoints.value = normalizePoints(updated.parse_result || [])
+    editingPoints.value = false
+    ElMessage.success('需求点已保存')
+  } finally {
+    savingPoints.value = false
+  }
 }
 
 async function deleteReq(req: Requirement) {
