@@ -27,7 +27,7 @@
           <el-button size="small" @click="setCurrentOnly(p)">设为当前</el-button>
           <el-button size="small" type="primary" @click="openProject(p)">进入项目</el-button>
           <el-button size="small" @click="editProject(p)">编辑</el-button>
-          <el-button size="small" type="danger" plain @click="archiveProject(p)">归档</el-button>
+          <el-button size="small" type="danger" plain @click="deleteProject(p)">删除</el-button>
         </div>
       </div>
 
@@ -123,11 +123,14 @@ async function handleSave() {
   }
 }
 
-async function archiveProject(p: Project) {
-  await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', { type: 'warning' })
+async function deleteProject(p: Project) {
+  await ElMessageBox.confirm(`确认删除项目「${p.name}」？删除后不可恢复。`, '删除确认', { type: 'warning' })
   await projectApi.remove(p.id)
-  ElMessage.success('已归档')
-  projectStore.fetchProjects()
+  if (projectStore.current?.id === p.id) {
+    projectStore.clearCurrent()
+  }
+  ElMessage.success('项目已删除')
+  await projectStore.fetchProjects()
 }
 </script>
 

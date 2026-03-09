@@ -11,7 +11,6 @@
 
       <el-menu
         :default-active="activeMenu"
-        :default-openeds="defaultOpeneds"
         :collapse="collapsed"
         :collapse-transition="false"
         router
@@ -27,45 +26,20 @@
           <template #title>项目管理</template>
         </el-menu-item>
 
-        <template v-if="projectStore.projects.length">
-          <div v-if="!collapsed" class="menu-section-title">项目导航</div>
-          <el-sub-menu index="project-list" class="project-list-sub-menu">
-            <template #title>
-              <el-icon><Collection /></el-icon>
-              <span>所有项目</span>
-            </template>
-            <el-menu-item
-              v-for="p in sidebarProjects"
-              :key="p.id"
-              :index="`/projects/${p.id}/requirements`"
-              @click="selectProject(p)"
-            >
-              <span class="project-item-label">{{ p.icon }} {{ p.name }}</span>
-              <span v-if="projectStore.current?.id === p.id" class="current-dot"></span>
-            </el-menu-item>
-          </el-sub-menu>
-        </template>
-
         <template v-if="projectStore.current">
           <div v-if="!collapsed" class="menu-section-title">当前项目</div>
-          <el-sub-menu index="project" class="project-sub-menu">
-            <template #title>
-              <el-icon><Files /></el-icon>
-              <span>{{ projectStore.current.icon }} {{ projectStore.current.name }}</span>
-            </template>
-            <el-menu-item :index="`/projects/${projectStore.current.id}/requirements`">
-              <el-icon><Document /></el-icon>
-              <template #title>需求管理</template>
-            </el-menu-item>
-            <el-menu-item :index="`/projects/${projectStore.current.id}/generate`">
-              <el-icon><MagicStick /></el-icon>
-              <template #title>智能生成</template>
-            </el-menu-item>
-            <el-menu-item :index="`/projects/${projectStore.current.id}/cases`">
-              <el-icon><List /></el-icon>
-              <template #title>用例库</template>
-            </el-menu-item>
-          </el-sub-menu>
+          <el-menu-item :index="`/projects/${projectStore.current.id}/requirements`">
+            <el-icon><Document /></el-icon>
+            <template #title>需求管理</template>
+          </el-menu-item>
+          <el-menu-item :index="`/projects/${projectStore.current.id}/generate`">
+            <el-icon><MagicStick /></el-icon>
+            <template #title>智能生成</template>
+          </el-menu-item>
+          <el-menu-item :index="`/projects/${projectStore.current.id}/cases`">
+            <el-icon><List /></el-icon>
+            <template #title>用例库</template>
+          </el-menu-item>
         </template>
 
         <div v-if="!collapsed" class="menu-section-title">系统设置</div>
@@ -93,6 +67,31 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <el-popover v-if="projectStore.projects.length" placement="bottom-end" :width="360" trigger="click">
+            <template #reference>
+              <div class="project-switcher">
+                <span>{{ projectStore.current?.icon || '📋' }}</span>
+                <span class="project-switcher-name">{{ projectStore.current?.name || '选择项目' }}</span>
+                <el-icon><ArrowDown /></el-icon>
+              </div>
+            </template>
+            <div class="project-panel">
+              <div class="project-panel-header">
+                <strong>项目导航</strong>
+                <el-button link type="primary" @click="router.push('/projects')">项目管理</el-button>
+              </div>
+              <div class="project-list">
+                <div v-for="p in sidebarProjects" :key="p.id" class="project-row">
+                  <div class="project-row-main" @click="enterProject(p)">
+                    <span>{{ p.icon }}</span>
+                    <span class="project-row-name">{{ p.name }}</span>
+                    <el-tag v-if="projectStore.current?.id === p.id" size="small" type="primary">当前</el-tag>
+                  </div>
+                  <el-button size="small" type="danger" link @click="deleteProject(p)">删除</el-button>
+                </div>
+              </div>
+            </div>
+          </el-popover>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="32" :style="{ background: '#4f6ef7' }">
@@ -127,7 +126,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { projectApi } from '@/api/projects'
 import type { Project } from '@/api/types'
 
 const auth = useAuthStore()
@@ -138,7 +138,6 @@ const collapsed = ref(false)
 
 const activeMenu = computed(() => route.path)
 const currentProjectId = computed(() => Number(route.params.id || 0))
-const defaultOpeneds = computed(() => currentProjectId.value ? ['project-list', 'project'] : ['project-list'])
 const sidebarProjects = computed(() => {
   const projects = [...projectStore.projects]
   projects.sort((a, b) => (b.id === projectStore.current?.id ? 1 : 0) - (a.id === projectStore.current?.id ? 1 : 0))
@@ -173,6 +172,22 @@ async function handleCommand(cmd: string) {
 
 function selectProject(p: Project) {
   projectStore.setCurrent(p)
+}
+
+function enterProject(p: Project) {
+  selectProject(p)
+  router.push(`/projects/${p.id}/requirements`)
+}
+
+async function deleteProject(p: Project) {
+  await ElMessageBox.confirm(`确认删除项目「${p.name}」？删除后不可恢复。`, '删除确认', { type: 'warning' })
+  await projectApi.remove(p.id)
+  if (projectStore.current?.id === p.id) {
+    projectStore.clearCurrent()
+    if (route.path.includes('/projects/')) router.push('/projects')
+  }
+  await projectStore.fetchProjects()
+  ElMessage.success('项目已删除')
 }
 
 async function hydrateSidebarProjects() {
@@ -277,12 +292,6 @@ watch(() => route.params.id, syncCurrentProject)
   border-radius: 10px;
   background: rgba(255,255,255,.04) !important;
 }
-:deep(.project-list-sub-menu .el-menu--inline) {
-  margin: 2px 0 6px;
-  padding: 4px;
-  border-radius: 10px;
-  background: rgba(255,255,255,.03) !important;
-}
 .project-item-label {
   max-width: 140px;
   overflow: hidden;
@@ -299,6 +308,63 @@ watch(() => route.params.id, syncCurrentProject)
   vertical-align: middle;
 }
 :deep(.sidebar-menu .el-icon) { font-size: 15px; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.project-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+}
+.project-switcher-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.project-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.project-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.project-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.project-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+}
+.project-row-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .sidebar-footer {
   padding: 12px;

@@ -26,5 +26,10 @@ export const useProjectStore = defineStore('project', () => {
     localStorage.setItem('current_project_id', String(p.id))
   }
 
-  return { projects, current, fetchProjects, fetchProject, setCurrent }
+  function clearCurrent() {
+    current.value = null
+    localStorage.removeItem('current_project_id')
+  }
+
+  return { projects, current, fetchProjects, fetchProject, setCurrent, clearCurrent }
 })
