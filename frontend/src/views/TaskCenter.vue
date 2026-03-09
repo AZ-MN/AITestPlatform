@@ -3,6 +3,10 @@
     <div class="page-header">
       <h2>任务中心</h2>
       <div class="actions">
+        <el-select v-model="taskType" placeholder="全部类型" clearable style="width:140px" @change="fetchTasks">
+          <el-option label="用例生成" value="generate_cases" />
+          <el-option label="需求重解析" value="reparse_requirement" />
+        </el-select>
         <el-select v-model="status" placeholder="全部状态" clearable style="width:140px" @change="fetchTasks">
           <el-option label="排队中" value="queued" />
           <el-option label="执行中" value="running" />
@@ -10,12 +14,20 @@
           <el-option label="失败" value="failed" />
           <el-option label="已停止" value="stopped" />
         </el-select>
+        <el-switch v-model="autoRefresh" active-text="自动刷新" @change="toggleRefresh" />
         <el-button @click="fetchTasks">刷新</el-button>
       </div>
     </div>
 
+    <div class="stats-row">
+      <div class="stat"><strong>{{ tasks.length }}</strong><span>总任务</span></div>
+      <div class="stat"><strong>{{ queuedCount }}</strong><span>排队中</span></div>
+      <div class="stat"><strong>{{ runningCount }}</strong><span>执行中</span></div>
+      <div class="stat"><strong>{{ failedCount }}</strong><span>失败/停止</span></div>
+    </div>
+
     <div class="page-card">
-      <el-table :data="tasks" v-loading="loading">
+      <el-table :data="filteredTasks" v-loading="loading">
         <el-table-column prop="id" label="任务ID" width="90" />
         <el-table-column label="类型" width="140">
           <template #default="{ row }">{{ typeLabel(row.task_type) }}</template>
@@ -47,6 +59,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-empty v-if="!loading && !filteredTasks.length" description="暂无匹配任务" />
     </div>
   </div>
 </template>
@@ -54,7 +67,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { taskApi } from '@/api/tasks'
 import type { TaskJob } from '@/api/types'
 
@@ -63,6 +76,8 @@ const router = useRouter()
 const loading = ref(false)
 const tasks = ref<TaskJob[]>([])
 const status = ref<string>()
+const taskType = ref<string>()
+const autoRefresh = ref(true)
 const projectId = computed(() => Number(route.query.project_id || 0) || undefined)
 let timer: number | undefined
 
@@ -74,6 +89,19 @@ onUnmounted(() => {
   if (timer) window.clearInterval(timer)
 })
 
+const filteredTasks = computed(() => {
+  if (!taskType.value) return tasks.value
+  return tasks.value.filter(t => t.task_type === taskType.value)
+})
+const queuedCount = computed(() => tasks.value.filter(t => t.status === 'queued').length)
+const runningCount = computed(() => tasks.value.filter(t => t.status === 'running').length)
+const failedCount = computed(() => tasks.value.filter(t => t.status === 'failed' || t.status === 'stopped').length)
+
+function toggleRefresh() {
+  if (timer) window.clearInterval(timer)
+  if (autoRefresh.value) timer = window.setInterval(fetchTasks, 3000)
+}
+
 async function fetchTasks() {
   loading.value = true
   try {
@@ -84,6 +112,7 @@ async function fetchTasks() {
 }
 
 async function stopTask(id: number) {
+  await ElMessageBox.confirm('确认强制停止该任务？', '停止任务', { type: 'warning' })
   await taskApi.stop(id)
   ElMessage.success('已请求停止任务')
   fetchTasks()
@@ -113,4 +142,17 @@ const statusType = (s: string) => ({ queued: 'info', running: 'warning', success
 .task-page { max-width: 1300px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .actions { display: flex; gap: 8px; }
+.stats-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.stat {
+  min-width: 120px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat strong { font-size: 18px; }
+.stat span { font-size: 12px; color: var(--text-secondary); }
 </style>

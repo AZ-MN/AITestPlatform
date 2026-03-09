@@ -79,23 +79,25 @@
                 <el-icon><ArrowDown /></el-icon>
               </div>
             </template>
-            <div class="project-panel">
-              <div class="project-panel-header">
-                <strong>项目导航</strong>
-                <el-button link type="primary" @click="router.push('/projects')">项目管理</el-button>
-              </div>
-              <div class="project-list">
-                <div v-for="p in sidebarProjects" :key="p.id" class="project-row">
-                  <div class="project-row-main" @click="enterProject(p)">
-                    <span>{{ p.icon }}</span>
-                    <span class="project-row-name">{{ p.name }}</span>
-                    <el-tag v-if="projectStore.current?.id === p.id" size="small" type="primary">当前</el-tag>
+              <div class="project-panel">
+                <div class="project-panel-header">
+                  <strong>项目导航</strong>
+                  <el-button link type="primary" @click="router.push('/projects')">项目管理</el-button>
+                </div>
+                <el-input v-model="projectKeyword" size="small" placeholder="搜索项目..." clearable style="margin-bottom:8px" />
+                <div class="project-list">
+                  <div v-for="p in filteredSidebarProjects" :key="p.id" class="project-row">
+                    <div class="project-row-main" @click="enterProject(p)">
+                      <span>{{ p.icon }}</span>
+                      <span class="project-row-name">{{ p.name }}</span>
+                      <el-tag v-if="projectStore.current?.id === p.id" size="small" type="primary">当前</el-tag>
+                    </div>
+                    <el-button size="small" type="danger" link @click="deleteProject(p)">删除</el-button>
                   </div>
-                  <el-button size="small" type="danger" link @click="deleteProject(p)">删除</el-button>
+                  <div v-if="!filteredSidebarProjects.length" class="project-empty">未找到匹配项目</div>
                 </div>
               </div>
-            </div>
-          </el-popover>
+            </el-popover>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <el-avatar :size="32" :style="{ background: '#4f6ef7' }">
@@ -139,6 +141,7 @@ const projectStore = useProjectStore()
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
+const projectKeyword = ref('')
 
 const activeMenu = computed(() => route.path)
 const currentProjectId = computed(() => Number(route.params.id || 0))
@@ -146,6 +149,11 @@ const sidebarProjects = computed(() => {
   const projects = [...projectStore.projects]
   projects.sort((a, b) => (b.id === projectStore.current?.id ? 1 : 0) - (a.id === projectStore.current?.id ? 1 : 0))
   return projects
+})
+const filteredSidebarProjects = computed(() => {
+  const kw = projectKeyword.value.trim().toLowerCase()
+  if (!kw) return sidebarProjects.value
+  return sidebarProjects.value.filter(p => p.name.toLowerCase().includes(kw))
 })
 
 const breadcrumbs = computed(() => {
@@ -349,6 +357,12 @@ watch(() => route.params.id, syncCurrentProject)
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.project-empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 10px 0;
 }
 .project-row {
   display: flex;

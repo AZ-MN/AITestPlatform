@@ -1,0 +1,1 @@
+import{a0 as s}from"./index-Dn2BhDa9.js";const a={list:t=>s.get("/tasks",{params:t}),createGenerate:t=>s.post("/tasks/generate",{payload:t}),createReparse:t=>s.post("/tasks/reparse",t),stop:t=>s.post(`/tasks/${t}/stop`),retry:t=>s.post(`/tasks/${t}/retry`)};export{a as t};
