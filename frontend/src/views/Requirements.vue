@@ -44,9 +44,10 @@
       <el-table-column label="创建时间" width="160">
         <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="280" fixed="right">
         <template #default="{ row }">
           <el-button size="small" type="primary" link @click="viewReq(row)">查看需求点</el-button>
+          <el-button size="small" type="warning" link :loading="reparsingId === row.id" @click="openReparse(row)">重新解析</el-button>
           <el-button size="small" type="success" link
             @click="$router.push(`/projects/${projectId}/generate?req_id=${row.id}`)">
             生成用例
@@ -84,6 +85,9 @@
             未检测到可用模型，请先到「模型设置」添加配置。
           </div>
         </el-form-item>
+        <el-form-item label="解析提示词">
+          <el-input v-model="uploadForm.parsePrompt" type="textarea" :rows="2" placeholder="可选：例如，按最小可测试步骤拆分，覆盖异常与边界场景" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showUpload = false">取消</el-button>
@@ -113,10 +117,34 @@
             未检测到可用模型，请先到「模型设置」添加配置。
           </div>
         </el-form-item>
+        <el-form-item label="解析提示词">
+          <el-input v-model="textForm.parsePrompt" type="textarea" :rows="2" placeholder="可选：例如，每条需求点仅保留一个可验证行为" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showText = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="handleTextSave">保存并解析</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="showReparse" title="重新解析需求" width="560px">
+      <el-form :model="reparseForm" label-width="90px">
+        <el-form-item label="AI解析">
+          <el-switch v-model="reparseForm.useAi" active-text="AI智能解析需求点" inactive-text="规则解析" />
+        </el-form-item>
+        <el-form-item v-if="reparseForm.useAi" label="AI模型">
+          <el-select v-model="reparseForm.aiProvider" placeholder="选择模型供应商" style="width:100%">
+            <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
+              :label="`${m.provider} · ${m.model_name}${m.is_default ? '（默认）' : ''}`" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="解析提示词">
+          <el-input v-model="reparseForm.parsePrompt" type="textarea" :rows="3" placeholder="例如：按测试工程师视角拆分到最小可测试行为，优先保留可执行断言" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showReparse = false">取消</el-button>
+        <el-button type="primary" :loading="reparsing" @click="handleReparse">开始重新解析</el-button>
       </template>
     </el-dialog>
 
@@ -202,11 +230,16 @@ const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.pars
 const editablePoints = ref<any[]>([])
 const editingPoints = ref(false)
 const savingPoints = ref(false)
+const showReparse = ref(false)
+const reparsing = ref(false)
+const reparsingId = ref<number>()
+const reparseTarget = ref<Requirement | null>(null)
 const uploadFile = ref<File | null>(null)
 const modelConfigs = ref<AIModelConfig[]>([])
 
-const uploadForm = reactive({ title: '', useAi: true, aiProvider: '' })
-const textForm = reactive({ title: '', content: '', useAi: true, aiProvider: '' })
+const uploadForm = reactive({ title: '', useAi: true, aiProvider: '', parsePrompt: '' })
+const textForm = reactive({ title: '', content: '', useAi: true, aiProvider: '', parsePrompt: '' })
+const reparseForm = reactive({ useAi: true, aiProvider: '', parsePrompt: '' })
 
 onMounted(async () => {
   await Promise.all([fetchReqs(), fetchModels()])
@@ -218,6 +251,7 @@ async function fetchModels() {
   if (def) {
     uploadForm.aiProvider = def.provider
     textForm.aiProvider = def.provider
+    reparseForm.aiProvider = def.provider
   }
 }
 
@@ -243,11 +277,13 @@ async function handleUpload() {
   fd.append('title', uploadForm.title)
   fd.append('use_ai', String(uploadForm.useAi))
   if (uploadForm.useAi) fd.append('ai_provider', uploadForm.aiProvider)
+  if (uploadForm.parsePrompt.trim()) fd.append('parse_prompt', uploadForm.parsePrompt.trim())
   try {
     await requirementApi.upload(fd)
     ElMessage.success('上传解析成功')
     showUpload.value = false
     uploadForm.title = ''
+    uploadForm.parsePrompt = ''
     uploadForm.aiProvider = uploadForm.aiProvider || (modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || '')
     uploadFile.value = null
     fetchReqs()
@@ -263,7 +299,8 @@ async function handleTextSave() {
     await requirementApi.createText(
       { project_id: projectId.value, title: textForm.title, content: textForm.content },
       textForm.useAi,
-      textForm.useAi ? textForm.aiProvider : undefined
+      textForm.useAi ? textForm.aiProvider : undefined,
+      textForm.parsePrompt.trim() || undefined
     )
     ElMessage.success('需求解析成功')
     showText.value = false
@@ -271,7 +308,8 @@ async function handleTextSave() {
       title: '',
       content: '',
       useAi: true,
-      aiProvider: textForm.aiProvider || (modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || '')
+      aiProvider: textForm.aiProvider || (modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || ''),
+      parsePrompt: ''
     })
     fetchReqs()
   } finally { saving.value = false }
@@ -323,6 +361,39 @@ function addPoint() {
 
 function removePoint(index: number) {
   editablePoints.value.splice(index, 1)
+}
+
+function openReparse(req: Requirement) {
+  reparseTarget.value = req
+  reparseForm.useAi = true
+  reparseForm.parsePrompt = ''
+  reparseForm.aiProvider = reparseForm.aiProvider || modelConfigs.value.find(m => m.is_default)?.provider || modelConfigs.value[0]?.provider || ''
+  showReparse.value = true
+}
+
+async function handleReparse() {
+  if (!reparseTarget.value) return
+  if (reparseForm.useAi && !reparseForm.aiProvider) return ElMessage.warning('请先选择AI模型供应商')
+  reparsing.value = true
+  reparsingId.value = reparseTarget.value.id
+  try {
+    const updated = await requirementApi.reparse(reparseTarget.value.id, {
+      use_ai: reparseForm.useAi,
+      ai_provider: reparseForm.useAi ? reparseForm.aiProvider : undefined,
+      parse_prompt: reparseForm.parsePrompt.trim() || undefined,
+    })
+    const idx = requirements.value.findIndex(r => r.id === updated.id)
+    if (idx >= 0) requirements.value[idx] = updated
+    if (currentReq.value?.id === updated.id) {
+      currentReq.value = updated
+      editablePoints.value = normalizePoints(updated.parse_result || [])
+    }
+    showReparse.value = false
+    ElMessage.success('重新解析完成')
+  } finally {
+    reparsing.value = false
+    reparsingId.value = undefined
+  }
 }
 
 function splitFragments(text: string) {

@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.requirement import Requirement
+from app.models.testcase import AIModelConfig
 from app.schemas.requirement import RequirementCreate, RequirementUpdate, RequirementOut, RequirementParseRequest
 from app.services.document_parser import extract_text_from_file
 from app.services.ai_service import AIAdapter, SYSTEM_PROMPT_REQ_PARSE, parse_ai_json_response
@@ -46,6 +47,7 @@ async def upload_requirement(
     file: UploadFile = File(...),
     use_ai: bool = Form(True),
     ai_provider: Optional[str] = Form(None),
+    parse_prompt: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -85,7 +87,7 @@ async def upload_requirement(
         raise HTTPException(status_code=500, detail=f"文档解析失败: {str(e)}")
 
     # 解析需求点
-    parse_result = await _parse_req_points(text_content, use_ai, ai_provider)
+    parse_result = await _parse_req_points(text_content, use_ai, ai_provider, parse_prompt, db)
     req.parse_result = parse_result
     req.req_points_count = len(parse_result)
     req.status = "parsed"
@@ -100,6 +102,7 @@ async def create_text_requirement(
     req_in: RequirementCreate,
     use_ai: bool = True,
     ai_provider: Optional[str] = None,
+    parse_prompt: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -114,7 +117,7 @@ async def create_text_requirement(
     db.add(req)
     db.commit()
 
-    parse_result = await _parse_req_points(req_in.content or "", use_ai, ai_provider)
+    parse_result = await _parse_req_points(req_in.content or "", use_ai, ai_provider, parse_prompt, db)
     req.parse_result = parse_result
     req.req_points_count = len(parse_result)
     req.status = "parsed"
@@ -168,17 +171,60 @@ async def delete_requirement(
     return {"message": "删除成功"}
 
 
-async def _parse_req_points(content: str, use_ai: bool, ai_provider: Optional[str]) -> list:
+@router.post("/{req_id}/reparse", summary="重新解析需求点")
+async def reparse_requirement(
+    req_id: int,
+    use_ai: bool = True,
+    ai_provider: Optional[str] = None,
+    parse_prompt: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    req = db.query(Requirement).filter(Requirement.id == req_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="需求不存在")
+    if not (req.content and req.content.strip()):
+        raise HTTPException(status_code=400, detail="当前需求缺少原始内容，无法重新解析")
+
+    req.status = "parsing"
+    db.commit()
+    parse_result = await _parse_req_points(req.content, use_ai, ai_provider, parse_prompt, db)
+    req.parse_result = parse_result
+    req.req_points_count = len(parse_result)
+    req.status = "parsed"
+    db.commit()
+    db.refresh(req)
+    return RequirementOut.model_validate(req)
+
+
+def _resolve_model_config(db: Session, provider: Optional[str]):
+    q = db.query(AIModelConfig).filter(AIModelConfig.is_active == 1)
+    if provider:
+        return q.filter(AIModelConfig.provider == provider).order_by(AIModelConfig.is_default.desc(), AIModelConfig.id.desc()).first()
+    return q.order_by(AIModelConfig.is_default.desc(), AIModelConfig.id.desc()).first()
+
+
+async def _parse_req_points(content: str, use_ai: bool, ai_provider: Optional[str], parse_prompt: Optional[str], db: Session) -> list:
     """内部：解析需求点（AI 优先，失败降级到规则）"""
     if use_ai and content.strip():
         try:
-            adapter = AIAdapter(provider=ai_provider)
-            user_msg = (
+            cfg = _resolve_model_config(db, ai_provider)
+            provider = ai_provider or (cfg.provider if cfg else None)
+            temperature = float(cfg.temperature) if cfg and cfg.temperature else 0.3
+            adapter = AIAdapter(
+                provider=provider,
+                api_key=cfg.api_key if cfg else None,
+                api_base_url=cfg.api_base_url if cfg else None,
+                model=cfg.model_name if cfg else None,
+                temperature=temperature,
+            )
+            base_prompt = (
                 "请将以下需求文档按最小可测试行为进行细粒度拆分，"
                 "优先提取可直接用于测试用例设计的需求点：\n\n"
-                f"{content[:15000]}"
             )
-            raw = await adapter.chat(SYSTEM_PROMPT_REQ_PARSE, user_msg)
+            if parse_prompt and parse_prompt.strip():
+                base_prompt = f"{base_prompt}\n补充解析提示词：{parse_prompt.strip()}\n\n"
+            raw = await adapter.chat(SYSTEM_PROMPT_REQ_PARSE, f"{base_prompt}{content[:15000]}")
             parsed = parse_ai_json_response(raw)
             if parsed:
                 return parsed

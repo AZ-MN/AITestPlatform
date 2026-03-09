@@ -8,7 +8,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.models.testcase import TestCase
+from app.models.testcase import TestCase, AIModelConfig
 from app.models.requirement import Requirement
 from app.schemas.testcase import (
     TestCaseCreate, TestCaseUpdate, TestCaseOut,
@@ -28,6 +28,13 @@ def _case_to_dict(case: TestCase, db: Session) -> dict:
     creator = db.query(User).filter(User.id == case.created_by).first()
     d["creator_name"] = creator.full_name if creator else ""
     return d
+
+
+def _resolve_model_config(db: Session, provider: Optional[str]):
+    q = db.query(AIModelConfig).filter(AIModelConfig.is_active == 1)
+    if provider:
+        return q.filter(AIModelConfig.provider == provider).order_by(AIModelConfig.is_default.desc(), AIModelConfig.id.desc()).first()
+    return q.order_by(AIModelConfig.is_default.desc(), AIModelConfig.id.desc()).first()
 
 
 # ── 列表与查询 ─────────────────────────────────────────────────
@@ -118,7 +125,15 @@ async def generate_cases(
     )
 
     # 调用 AI
-    adapter = AIAdapter(provider=gen_req.ai_provider, temperature=gen_req.temperature)
+    cfg = _resolve_model_config(db, gen_req.ai_provider)
+    provider = gen_req.ai_provider or (cfg.provider if cfg else None)
+    adapter = AIAdapter(
+        provider=provider,
+        api_key=cfg.api_key if cfg else None,
+        api_base_url=cfg.api_base_url if cfg else None,
+        model=cfg.model_name if cfg else None,
+        temperature=gen_req.temperature if gen_req.temperature is not None else (float(cfg.temperature) if cfg and cfg.temperature else 0.3),
+    )
     try:
         raw_response = await adapter.chat(system_prompt, user_msg, max_tokens=8192)
     except Exception as e:
