@@ -163,6 +163,19 @@ async function handleCommand(cmd: string) {
 .logo-text { color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
 
 .sidebar-menu { border: none; background: transparent; flex: 1; overflow-y: auto; }
+:deep(.sidebar-menu.el-menu) {
+  --el-menu-bg-color: transparent;
+  --el-menu-hover-bg-color: rgba(255,255,255,.08);
+  --el-menu-text-color: rgba(255,255,255,.72);
+  --el-menu-active-color: #fff;
+  border-right: none;
+  background: transparent !important;
+}
+:deep(.sidebar-menu .el-menu),
+:deep(.sidebar-menu .el-sub-menu__title),
+:deep(.sidebar-menu .el-menu--inline) {
+  background: transparent !important;
+}
 :deep(.el-menu-item), :deep(.el-sub-menu__title) {
   color: rgba(255,255,255,.7) !important;
   border-radius: 8px;
@@ -174,6 +187,9 @@ async function handleCommand(cmd: string) {
 }
 :deep(.el-menu-item.is-active) {
   background: #4f6ef7 !important;
+  color: #fff !important;
+}
+:deep(.el-sub-menu.is-active > .el-sub-menu__title) {
   color: #fff !important;
 }
 :deep(.el-sub-menu .el-menu-item) { padding-left: 44px !important; }
