@@ -99,6 +99,7 @@ class ExportRequest(BaseModel):
 
 
 class AIModelConfigCreate(BaseModel):
+    name: Optional[str] = None
     provider: str
     model_name: str
     api_key: Optional[str] = None
@@ -108,8 +109,20 @@ class AIModelConfigCreate(BaseModel):
     is_default: int = 0
 
 
+class AIModelConfigUpdate(BaseModel):
+    name: Optional[str] = None
+    provider: Optional[str] = None
+    model_name: Optional[str] = None
+    api_key: Optional[str] = None
+    api_base_url: Optional[str] = None
+    temperature: Optional[str] = None
+    max_tokens: Optional[int] = None
+    is_default: Optional[int] = None
+
+
 class AIModelConfigOut(BaseModel):
     id: int
+    name: Optional[str] = None
     provider: str
     model_name: str
     api_base_url: Optional[str]

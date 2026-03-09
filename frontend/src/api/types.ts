@@ -82,6 +82,7 @@ export interface TestCase {
 
 export interface AIModelConfig {
   id: number
+  name?: string
   provider: string
   model_name: string
   api_base_url?: string

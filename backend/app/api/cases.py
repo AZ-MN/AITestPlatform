@@ -165,6 +165,38 @@ async def generate_cases(
     }
 
 
+# ── 统计（必须在 /{case_id} 之前注册，避免路由冲突）─────────────
+
+@router.get("/stats/summary", summary="项目用例统计")
+async def case_stats(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from sqlalchemy import func
+    total = db.query(TestCase).filter(TestCase.project_id == project_id).count()
+    by_level = db.query(TestCase.case_level, func.count()).filter(
+        TestCase.project_id == project_id
+    ).group_by(TestCase.case_level).all()
+    by_type = db.query(TestCase.test_type, func.count()).filter(
+        TestCase.project_id == project_id
+    ).group_by(TestCase.test_type).all()
+    by_status = db.query(TestCase.status, func.count()).filter(
+        TestCase.project_id == project_id
+    ).group_by(TestCase.status).all()
+    ai_count = db.query(TestCase).filter(
+        TestCase.project_id == project_id, TestCase.ai_generated == 1
+    ).count()
+    return {
+        "total_cases": total,
+        "ai_generated": ai_count,
+        "manual": total - ai_count,
+        "by_level": dict(by_level),
+        "by_type": dict(by_type),
+        "by_status": dict(by_status),
+    }
+
+
 # ── 单条 CRUD ─────────────────────────────────────────────────
 
 @router.get("/{case_id}", summary="获取用例详情")
@@ -282,33 +314,3 @@ async def export(
     )
 
 
-# ── 统计 ──────────────────────────────────────────────────────
-
-@router.get("/stats/summary", summary="项目用例统计")
-async def case_stats(
-    project_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    from sqlalchemy import func
-    total = db.query(TestCase).filter(TestCase.project_id == project_id).count()
-    by_level = db.query(TestCase.case_level, func.count()).filter(
-        TestCase.project_id == project_id
-    ).group_by(TestCase.case_level).all()
-    by_type = db.query(TestCase.test_type, func.count()).filter(
-        TestCase.project_id == project_id
-    ).group_by(TestCase.test_type).all()
-    by_status = db.query(TestCase.status, func.count()).filter(
-        TestCase.project_id == project_id
-    ).group_by(TestCase.status).all()
-    ai_count = db.query(TestCase).filter(
-        TestCase.project_id == project_id, TestCase.ai_generated == 1
-    ).count()
-    return {
-        "total": total,
-        "ai_generated": ai_count,
-        "manual": total - ai_count,
-        "by_level": dict(by_level),
-        "by_type": dict(by_type),
-        "by_status": dict(by_status),
-    }

@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.testcase import AIModelConfig
-from app.schemas.testcase import AIModelConfigCreate, AIModelConfigOut
+from app.schemas.testcase import AIModelConfigCreate, AIModelConfigUpdate, AIModelConfigOut
 
 router = APIRouter(prefix="/models", tags=["AI模型管理"])
 
@@ -53,16 +53,17 @@ async def add_model_config(
 @router.put("/{config_id}", response_model=AIModelConfigOut, summary="更新模型配置")
 async def update_model_config(
     config_id: int,
-    config_in: AIModelConfigCreate,
+    config_in: AIModelConfigUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     cfg = db.query(AIModelConfig).filter(AIModelConfig.id == config_id).first()
     if not cfg:
         raise HTTPException(status_code=404, detail="配置不存在")
-    if config_in.is_default:
+    update_data = config_in.model_dump(exclude_unset=True)
+    if update_data.get("is_default"):
         db.query(AIModelConfig).filter(AIModelConfig.id != config_id).update({"is_default": 0})
-    for field, value in config_in.model_dump(exclude_unset=True).items():
+    for field, value in update_data.items():
         setattr(cfg, field, value)
     db.commit()
     db.refresh(cfg)

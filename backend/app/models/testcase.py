@@ -51,6 +51,7 @@ class AIModelConfig(Base):
     __tablename__ = "ai_model_configs"
 
     id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100))                          # 配置展示名称
     provider = Column(String(30), nullable=False)   # openai / anthropic / tongyi / zhipu / deepseek
     model_name = Column(String(100), nullable=False)
     api_key = Column(String(500))
