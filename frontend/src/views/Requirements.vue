@@ -153,6 +153,10 @@
       <div class="points-toolbar">
         <span class="points-count">共 {{ editablePoints.length }} 个需求点</span>
         <div style="display:flex;gap:8px">
+          <el-radio-group v-model="pointViewMode" size="small" :disabled="editingPoints">
+            <el-radio-button value="xmind">XMind视图</el-radio-button>
+            <el-radio-button value="list">列表视图</el-radio-button>
+          </el-radio-group>
           <el-button size="small" @click="exportXmind">导出XMind(OPML)</el-button>
           <el-button size="small" @click="toggleEditPoints">{{ editingPoints ? '完成编辑' : '编辑需求点' }}</el-button>
           <el-button v-if="editingPoints" size="small" @click="splitPointsFiner">细粒度拆分</el-button>
@@ -163,7 +167,21 @@
           </el-button>
         </div>
       </div>
-      <div class="points-list">
+      <div v-if="pointViewMode === 'xmind' && !editingPoints" class="xmind-wrap">
+        <div class="xmind-root">{{ currentReq?.title || '需求梳理' }}</div>
+        <div class="xmind-modules">
+          <div v-for="m in xmindTree" :key="m.module" class="xmind-module">
+            <div class="xmind-module-title">{{ m.module }}（{{ m.points.length }}）</div>
+            <div class="xmind-points">
+              <div v-for="p in m.points" :key="p.id + p.title" class="xmind-point">
+                <div class="xmind-point-title">{{ p.id }} {{ p.title }}</div>
+                <div class="xmind-point-desc">{{ p.description }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="points-list">
         <div v-for="(p, i) in editablePoints" :key="i" class="point-item">
           <div class="point-header">
             <template v-if="editingPoints">
@@ -230,6 +248,7 @@ const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.pars
 const editablePoints = ref<any[]>([])
 const editingPoints = ref(false)
 const savingPoints = ref(false)
+const pointViewMode = ref<'xmind' | 'list'>('xmind')
 const showReparse = ref(false)
 const reparsing = ref(false)
 const reparsingId = ref<number>()
@@ -240,6 +259,15 @@ const modelConfigs = ref<AIModelConfig[]>([])
 const uploadForm = reactive({ title: '', useAi: true, aiProvider: '', parsePrompt: '' })
 const textForm = reactive({ title: '', content: '', useAi: true, aiProvider: '', parsePrompt: '' })
 const reparseForm = reactive({ useAi: true, aiProvider: '', parsePrompt: '' })
+const xmindTree = computed(() => {
+  const groups = new Map<string, any[]>()
+  editablePoints.value.forEach((p: any) => {
+    const moduleName = (p.module || '未分类模块').trim() || '未分类模块'
+    if (!groups.has(moduleName)) groups.set(moduleName, [])
+    groups.get(moduleName)!.push(p)
+  })
+  return [...groups.entries()].map(([module, points]) => ({ module, points }))
+})
 
 onMounted(async () => {
   await Promise.all([fetchReqs(), fetchModels()])
@@ -319,11 +347,13 @@ function viewReq(req: Requirement) {
   currentReq.value = req
   editablePoints.value = normalizePoints(req.parse_result || [])
   editingPoints.value = false
+  pointViewMode.value = 'xmind'
   showPoints.value = true
 }
 
 function toggleEditPoints() {
   editingPoints.value = !editingPoints.value
+  if (editingPoints.value) pointViewMode.value = 'list'
   if (editingPoints.value && !editablePoints.value.length) {
     editablePoints.value = [newPoint(1)]
   }
@@ -516,6 +546,43 @@ function fmtDate(s: string) {
 .points-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .points-count { font-size: 13px; color: var(--text-secondary); }
 .points-list { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.xmind-wrap {
+  max-height: 65vh;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid #e9edf8;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fbfcff 0%, #f7f9ff 100%);
+}
+.xmind-root {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #4f6ef7;
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.xmind-modules { display: flex; flex-direction: column; gap: 12px; }
+.xmind-module {
+  border-left: 2px solid #cdd8ff;
+  padding-left: 12px;
+}
+.xmind-module-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b4fc4;
+  margin-bottom: 8px;
+}
+.xmind-points { display: flex; flex-direction: column; gap: 8px; }
+.xmind-point {
+  border: 1px solid #dfe6ff;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+}
+.xmind-point-title { font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 4px; }
+.xmind-point-desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
 .point-item { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
 .point-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .point-id { font-size: 11px; color: #9ca3af; font-family: monospace; }
