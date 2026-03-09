@@ -142,7 +142,7 @@ const config = reactive({
 })
 
 const canGenerate = computed(() =>
-  reqPoints.value.length > 0
+  reqPoints.value.length > 0 && !!config.ai_provider
 )
 
 const modules = computed(() => {
@@ -173,6 +173,7 @@ onMounted(async () => {
 })
 
 async function onReqChange(id?: number) {
+  config.module_filter = undefined
   if (!id) { reqPoints.value = []; return }
   const req = await requirementApi.get(id)
   reqPoints.value = (req.parse_result as RequirementPoint[]) || []
@@ -180,6 +181,7 @@ async function onReqChange(id?: number) {
 
 async function handleGenerate() {
   if (!reqPoints.value.length) return ElMessage.warning('请先选择需求来源')
+  if (!config.ai_provider) return ElMessage.warning('请先在模型设置中配置并选择AI模型')
   generating.value = true
   lastResult.value = null
   try {

@@ -4,7 +4,7 @@
       <h2>用例库</h2>
       <div class="header-actions">
         <el-button :icon="Download" @click="showExport = true">导出</el-button>
-        <el-button type="primary" :icon="Plus" @click="showCreate = true">新建用例</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">新建用例</el-button>
       </div>
     </div>
 
@@ -30,6 +30,10 @@
         <el-option label="已评审" value="reviewed" />
       </el-select>
       <el-button @click="resetFilters">重置</el-button>
+      <el-tag v-if="generationBatch" type="success" effect="plain">
+        批次：{{ generationBatch }}
+      </el-tag>
+      <el-button v-if="generationBatch" link type="primary" @click="clearBatchFilter">清空批次筛选</el-button>
       <div class="filter-stats">
         共 <strong>{{ total }}</strong> 条
         <template v-if="selectedIds.length">
@@ -132,6 +136,52 @@
       </div>
     </el-drawer>
 
+    <!-- 新建/编辑弹窗 -->
+    <el-dialog v-model="showCreate" :title="editing ? '编辑用例' : '新建用例'" width="680px">
+      <el-form :model="caseForm" label-width="90px">
+        <el-form-item label="用例标题" required>
+          <el-input v-model="caseForm.title" placeholder="请输入用例标题" />
+        </el-form-item>
+        <el-form-item label="所属模块">
+          <el-input v-model="caseForm.module" placeholder="如：登录、支付、订单" />
+        </el-form-item>
+        <el-form-item label="优先级">
+          <el-select v-model="caseForm.case_level" style="width: 160px">
+            <el-option label="P0 核心" value="P0" />
+            <el-option label="P1 高优" value="P1" />
+            <el-option label="P2 中优" value="P2" />
+            <el-option label="P3 低优" value="P3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="测试类型">
+          <el-select v-model="caseForm.test_type" style="width: 160px">
+            <el-option label="功能测试" value="functional" />
+            <el-option label="接口测试" value="api" />
+            <el-option label="单元测试" value="unit" />
+            <el-option label="回归测试" value="regression" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="适用阶段">
+          <el-select v-model="caseForm.stage" style="width: 160px">
+            <el-option label="系统测试" value="system" />
+            <el-option label="集成测试" value="integration" />
+            <el-option label="回归测试" value="regression" />
+            <el-option label="冒烟测试" value="smoke" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="前置条件">
+          <el-input v-model="caseForm.preconditions" type="textarea" :rows="2" placeholder="可选" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="caseForm.remarks" type="textarea" :rows="2" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreate = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="saveCase">{{ editing ? '保存修改' : '创建用例' }}</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 导出弹窗 -->
     <el-dialog v-model="showExport" title="导出用例" width="400px">
       <el-form label-width="80px">
@@ -161,14 +211,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Download, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { caseApi } from '@/api/cases'
 import type { TestCase } from '@/api/types'
+import type { TagProps } from 'element-plus'
 
 const route = useRoute()
+const router = useRouter()
 const projectId = computed(() => Number(route.params.id))
+const generationBatch = computed(() => route.query.batch ? String(route.query.batch) : '')
 const cases = ref<TestCase[]>([])
 const total = ref(0)
 const loading = ref(false)
@@ -181,14 +234,30 @@ const showExport = ref(false)
 const detailCase = ref<TestCase | null>(null)
 const ratingVal = ref(0)
 const exporting = ref(false)
+const saving = ref(false)
 const exportFmt = ref('excel')
 const exportScope = ref('all')
+const caseForm = reactive({
+  id: undefined as number | undefined,
+  title: '',
+  module: '',
+  case_level: 'P1',
+  test_type: 'functional',
+  stage: 'system',
+  preconditions: '',
+  remarks: '',
+})
+const editing = computed(() => typeof caseForm.id === 'number')
 
 const filters = reactive({
   keyword: '', test_type: '', case_level: '', status: ''
 })
 
 onMounted(fetchCases)
+watch(() => route.query.batch, () => {
+  page.value = 1
+  fetchCases()
+})
 
 async function fetchCases() {
   loading.value = true
@@ -197,6 +266,7 @@ async function fetchCases() {
       project_id: projectId.value,
       page: page.value,
       page_size: pageSize.value,
+      generation_batch: generationBatch.value || undefined,
       ...filters,
     })
     cases.value = res.items
@@ -221,7 +291,58 @@ function viewCase(c: TestCase) {
 }
 
 function editCase(c: TestCase) {
-  detailCase.value = { ...c }
+  caseForm.id = c.id
+  caseForm.title = c.title
+  caseForm.module = c.module || ''
+  caseForm.case_level = c.case_level
+  caseForm.test_type = c.test_type
+  caseForm.stage = c.stage
+  caseForm.preconditions = c.preconditions || ''
+  caseForm.remarks = c.remarks || ''
+  showCreate.value = true
+}
+
+async function saveCase() {
+  if (!caseForm.title.trim()) return ElMessage.warning('请输入用例标题')
+  saving.value = true
+  const payload = {
+    title: caseForm.title.trim(),
+    module: caseForm.module.trim() || undefined,
+    case_level: caseForm.case_level,
+    test_type: caseForm.test_type,
+    stage: caseForm.stage,
+    preconditions: caseForm.preconditions.trim() || undefined,
+    remarks: caseForm.remarks.trim() || undefined,
+  }
+  try {
+    if (editing.value) {
+      await caseApi.update(caseForm.id as number, payload)
+      ElMessage.success('用例更新成功')
+    } else {
+      await caseApi.create({ project_id: projectId.value, ...payload })
+      ElMessage.success('用例创建成功')
+    }
+    showCreate.value = false
+    resetCaseForm()
+    fetchCases()
+  } finally {
+    saving.value = false
+  }
+}
+
+function resetCaseForm() {
+  caseForm.id = undefined
+  caseForm.title = ''
+  caseForm.module = ''
+  caseForm.case_level = 'P1'
+  caseForm.test_type = 'functional'
+  caseForm.stage = 'system'
+  caseForm.preconditions = ''
+  caseForm.remarks = ''
+}
+
+function openCreate() {
+  resetCaseForm()
   showCreate.value = true
 }
 
@@ -273,8 +394,21 @@ const stageLabel = (s: string) =>
   ({ smoke: '冒烟', integration: '集成', system: '系统', regression: '回归' })[s] || s
 const statusLabel = (s: string) =>
   ({ draft: '草稿', pending_review: '待评审', reviewed: '已评审', deprecated: '已作废' })[s] || s
-const statusType = (s: string): string =>
-  ({ draft: 'info', pending_review: 'warning', reviewed: 'success', deprecated: 'danger' })[s] || 'info'
+const statusType = (s: string): TagProps['type'] => {
+  const map: Record<string, TagProps['type']> = {
+    draft: 'info',
+    pending_review: 'warning',
+    reviewed: 'success',
+    deprecated: 'danger',
+  }
+  return map[s] || 'info'
+}
+
+function clearBatchFilter() {
+  const query = { ...route.query }
+  delete query.batch
+  router.replace({ query })
+}
 </script>
 
 <style scoped>
