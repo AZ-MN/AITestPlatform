@@ -23,8 +23,17 @@
         <div class="card-actions">
           <el-button size="small" type="primary" @click="openProject(p)">进入项目</el-button>
           <el-button size="small" @click="editProject(p)">编辑</el-button>
-          <el-button size="small" type="danger" plain @click="archiveProject(p)">归档</el-button>
-          <el-button size="small" type="danger" @click="deleteProject(p)">删除</el-button>
+          <el-button
+            v-if="p.status === 'archived'"
+            size="small"
+            type="warning"
+            plain
+            @click="unarchiveProject(p)"
+          >
+            取消归档
+          </el-button>
+          <el-button v-else size="small" type="danger" plain @click="archiveProject(p)">归档</el-button>
+          <el-button size="small" type="danger" :disabled="p.status === 'archived'" @click="deleteProject(p)">删除</el-button>
         </div>
       </div>
 
@@ -122,7 +131,18 @@ async function archiveProject(p: Project) {
   await projectStore.fetchProjects()
 }
 
+async function unarchiveProject(p: Project) {
+  await ElMessageBox.confirm(`确认将项目「${p.name}」取消归档？`, '取消归档确认', { type: 'info' })
+  await projectApi.unarchive(p.id)
+  ElMessage.success('已取消归档')
+  await projectStore.fetchProjects()
+}
+
 async function deleteProject(p: Project) {
+  if (p.status === 'archived') {
+    ElMessage.warning('已归档项目不可删除，请先取消归档')
+    return
+  }
   await ElMessageBox.confirm(
     `确认永久删除项目「${p.name}」？该操作将同时删除其需求和测试用例，且不可恢复。`,
     '删除确认',
