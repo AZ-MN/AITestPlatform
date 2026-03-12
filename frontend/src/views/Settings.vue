@@ -217,8 +217,14 @@ async function removeConfig(cfg: AIModelConfig) {
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 
-.model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.model-card { display: flex; flex-direction: column; gap: 10px; }
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 280px));
+  justify-content: flex-start;
+  align-items: start;
+  gap: 14px;
+}
+.model-card { display: flex; flex-direction: column; gap: 8px; min-height: 158px; }
 .model-card-header { display: flex; align-items: center; gap: 10px; }
 .provider-badge {
   width: 40px; height: 40px; border-radius: 10px;
@@ -227,16 +233,16 @@ async function removeConfig(cfg: AIModelConfig) {
 }
 .model-name { font-size: 14px; font-weight: 600; }
 .provider-name { font-size: 12px; color: var(--text-secondary); }
-.model-meta { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; }
+.model-meta { display: flex; gap: 10px; font-size: 12px; color: #9ca3af; flex-wrap: wrap; }
 .model-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .test-result { font-size: 12px; padding: 6px 8px; border-radius: 6px; }
 .test-result.ok { background: #ecfdf5; color: #059669; }
 .test-result.fail { background: #fef2f2; color: #dc2626; }
 
 .add-model-card {
-  border: 2px dashed var(--border); border-radius: 12px; padding: 20px;
+  border: 2px dashed var(--border); border-radius: 12px; padding: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 150px;
+  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 158px;
   transition: all .2s; font-size: 14px;
 }
 .add-model-card:hover { border-color: #4f6ef7; color: #4f6ef7; }
