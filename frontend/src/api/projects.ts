@@ -8,6 +8,8 @@ export const projectApi = {
     http.post<any, Project>('/projects', data),
   update: (id: number, data: any) => http.put<any, Project>(`/projects/${id}`, data),
   remove: (id: number) => http.delete(`/projects/${id}`),
+  setStatus: (id: number, status: 'active' | 'archived') =>
+    http.put<any, Project>(`/projects/${id}`, { status }),
   archive: (id: number) => http.patch(`/projects/${id}/archive`),
   unarchive: (id: number) => http.patch(`/projects/${id}/unarchive`),
   members: (id: number) => http.get<any, any[]>(`/projects/${id}/members`),

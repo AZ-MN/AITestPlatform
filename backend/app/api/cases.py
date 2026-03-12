@@ -30,6 +30,43 @@ def _case_to_dict(case: TestCase, db: Session) -> dict:
     return d
 
 
+def _build_fallback_cases(req_points: List[dict], test_type: str, cover_scenarios: List[str], granularity: str) -> List[dict]:
+    scenario_label_map = {
+        "normal": "正常流程",
+        "exception": "异常场景",
+        "boundary": "边界场景",
+        "permission": "权限控制",
+        "compatibility": "兼容性",
+        "security": "安全性",
+    }
+    scenario_pool = [s for s in cover_scenarios if s in scenario_label_map] or ["normal", "exception", "boundary"]
+    keep_count = {"coarse": 1, "medium": 2, "fine": len(scenario_pool)}.get(granularity, 2)
+    selected_scenarios = scenario_pool[:keep_count]
+    stage = "integration" if test_type == "api" else ("system" if test_type == "functional" else "unit")
+
+    cases: List[dict] = []
+    for rp in req_points:
+        module = rp.get("module", "通用模块")
+        title = rp.get("title") or "需求验证"
+        priority = rp.get("priority", "P1")
+        for s in selected_scenarios:
+            scenario_cn = scenario_label_map.get(s, s)
+            cases.append({
+                "module": module,
+                "title": f"{title} - {scenario_cn}",
+                "case_level": priority,
+                "test_type": test_type,
+                "stage": stage,
+                "preconditions": f"已进入{module}，并具备执行“{title}”的基础环境",
+                "steps": [
+                    {"step": 1, "action": f"准备{scenario_cn}输入数据并发起操作", "expected": "系统接收请求且无异常崩溃"},
+                    {"step": 2, "action": "观察界面提示、返回结果与状态变化", "expected": f"结果符合{scenario_cn}预期且满足需求描述"},
+                ],
+                "remarks": "规则引擎兜底生成（未使用外部模型）",
+            })
+    return cases
+
+
 # ── 列表与查询 ─────────────────────────────────────────────────
 
 @router.get("", summary="获取用例列表")
@@ -117,16 +154,28 @@ async def generate_cases(
         custom_instructions=gen_req.custom_instructions or "",
     )
 
-    # 调用 AI
+    generation_mode = "ai"
+    ai_cases: List[dict] = []
+
+    # 调用 AI（失败时自动降级到规则生成，确保平台可用）
     adapter = AIAdapter(provider=gen_req.ai_provider, temperature=gen_req.temperature)
     try:
         raw_response = await adapter.chat(system_prompt, user_msg, max_tokens=8192)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        ai_cases = parse_ai_json_response(raw_response)
+    except Exception:
+        ai_cases = []
 
-    ai_cases = parse_ai_json_response(raw_response)
     if not ai_cases:
-        raise HTTPException(status_code=500, detail="AI 未返回有效的用例数据，请重试或切换模型")
+        generation_mode = "rule"
+        ai_cases = _build_fallback_cases(
+            req_points=req_points,
+            test_type=gen_req.test_type,
+            cover_scenarios=gen_req.cover_scenarios,
+            granularity=gen_req.granularity,
+        )
+
+    if not ai_cases:
+        raise HTTPException(status_code=500, detail="未生成到有效用例，请检查需求点后重试")
 
     # 持久化到数据库
     saved = []
@@ -161,7 +210,8 @@ async def generate_cases(
         "batch_id": batch_id,
         "total": len(saved),
         "cases": [_case_to_dict(c, db) for c in saved],
-        "elapsed_seconds": elapsed
+        "elapsed_seconds": elapsed,
+        "generation_mode": generation_mode,
     }
 
 

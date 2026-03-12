@@ -182,6 +182,7 @@ async function handleGenerate() {
   if (!reqPoints.value.length) return ElMessage.warning('请先选择需求来源')
   generating.value = true
   lastResult.value = null
+  const startAt = Date.now()
   try {
     const payload = {
       project_id: projectId.value,
@@ -197,11 +198,68 @@ async function handleGenerate() {
     }
     const result: any = await caseApi.generate(payload)
     lastResult.value = result
-    ElMessage.success(`生成完成，共 ${result.total} 条用例`)
+    if (result.generation_mode === 'rule') {
+      ElMessage.success(`已生成 ${result.total} 条用例（规则引擎模式）`)
+    } else {
+      ElMessage.success(`生成完成，共 ${result.total} 条用例`)
+    }
   } catch (e: any) {
-    // error handled by interceptor
+    const detail = e?.response?.data?.detail || ''
+    const shouldFallback =
+      e?.response?.status === 502 ||
+      (typeof detail === 'string' && (detail.includes('API Key') || detail.includes('未配置')))
+    if (shouldFallback) {
+      const fallbackResult = await generateByRules(startAt)
+      lastResult.value = fallbackResult
+      ElMessage.success(`已生成 ${fallbackResult.total} 条用例（本地规则模式）`)
+    }
   } finally {
     generating.value = false
+  }
+}
+
+async function generateByRules(startAt: number) {
+  const scenarioLabelMap: Record<string, string> = {
+    normal: '正常流程',
+    exception: '异常场景',
+    boundary: '边界场景',
+    permission: '权限控制',
+    compatibility: '兼容性',
+    security: '安全性',
+  }
+  const selected = (config.cover_scenarios || []).filter(s => scenarioLabelMap[s])
+  const picked = selected.slice(0, ({ coarse: 1, medium: 2, fine: selected.length } as any)[config.granularity] || 2)
+  const stage = config.test_type === 'api' ? 'integration' : (config.test_type === 'unit' ? 'unit' : 'system')
+  const createdCases: any[] = []
+  for (const p of filteredPoints.value) {
+    for (const s of picked.length ? picked : ['normal']) {
+      const scenarioName = scenarioLabelMap[s] || s
+      const payload = {
+        project_id: projectId.value,
+        requirement_id: config.requirement_id,
+        module: p.module || '通用模块',
+        title: `${p.title} - ${scenarioName}`,
+        case_level: p.priority || 'P1',
+        test_type: config.test_type,
+        stage,
+        preconditions: `已具备执行「${p.title}」的测试环境`,
+        steps: [
+          { step: 1, action: `输入${scenarioName}测试数据并执行`, expected: '系统成功接收请求' },
+          { step: 2, action: '检查页面/接口返回与状态变化', expected: `结果符合${scenarioName}预期` },
+        ],
+        expected_results: [`结果符合${scenarioName}预期`],
+        remarks: '前端规则引擎生成',
+      }
+      const created = await caseApi.create(payload)
+      createdCases.push(created)
+    }
+  }
+  return {
+    batch_id: `local-${Date.now()}`,
+    total: createdCases.length,
+    cases: createdCases,
+    elapsed_seconds: Number(((Date.now() - startAt) / 1000).toFixed(2)),
+    generation_mode: 'rule',
   }
 }
 

@@ -126,14 +126,30 @@ async function handleSave() {
 
 async function archiveProject(p: Project) {
   await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', { type: 'warning' })
-  await projectApi.archive(p.id)
+  try {
+    await projectApi.archive(p.id)
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await projectApi.setStatus(p.id, 'archived')
+    } else {
+      throw e
+    }
+  }
   ElMessage.success('已归档')
   await projectStore.fetchProjects()
 }
 
 async function unarchiveProject(p: Project) {
   await ElMessageBox.confirm(`确认将项目「${p.name}」取消归档？`, '取消归档确认', { type: 'info' })
-  await projectApi.unarchive(p.id)
+  try {
+    await projectApi.unarchive(p.id)
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await projectApi.setStatus(p.id, 'active')
+    } else {
+      throw e
+    }
+  }
   ElMessage.success('已取消归档')
   await projectStore.fetchProjects()
 }
@@ -174,7 +190,9 @@ async function deleteProject(p: Project) {
 .p-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
 .p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 36px; }
 .p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
-.card-actions { display: flex; gap: 8px; }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+:deep(.card-actions .el-button + .el-button) { margin-left: 0; }
+:deep(.card-actions .el-button) { flex: 1 1 calc(50% - 4px); min-width: 0; }
 
 .add-card {
   background: #fff;
@@ -208,8 +226,6 @@ async function deleteProject(p: Project) {
 .icon-opt:hover { border-color: #4f6ef7; }
 
 @media (max-width: 768px) {
-  .card-actions {
-    flex-wrap: wrap;
-  }
+  :deep(.card-actions .el-button) { flex-basis: 100%; }
 }
 </style>
