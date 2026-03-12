@@ -29,20 +29,20 @@
             style="margin-bottom:12px"
           />
 
-          <div class="section-label"><span class="sec-index">1</span>选择模型（必选）</div>
+          <div class="section-label"><span class="sec-index">1</span>选择模型<span class="required-mark">*</span></div>
           <el-select v-model="config.ai_provider" placeholder="请选择用于生成的AI模型" style="width:100%">
             <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
               :label="`${providerName(m.provider)} · ${m.model_name}`" />
             <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
           </el-select>
 
-          <div class="section-label"><span class="sec-index">2</span>选择需求来源（单选）</div>
+          <div class="section-label"><span class="sec-index">2</span>选择需求来源<span class="required-mark">*</span></div>
           <el-select v-model="config.requirement_id" placeholder="选择已解析的需求" clearable style="width:100%"
             @change="onReqChange">
             <el-option v-for="r in requirements" :key="r.id" :label="r.title" :value="r.id" />
           </el-select>
 
-          <div class="section-label"><span class="sec-index">3</span>选择覆盖模块（可选）</div>
+          <div class="section-label"><span class="sec-index">3</span>选择覆盖模块</div>
           <el-select v-model="config.module_filter" placeholder="全部模块" clearable style="width:100%">
             <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
           </el-select>
@@ -88,12 +88,19 @@
         </div>
       </div>
 
-      <el-dialog v-model="advancedDialogVisible" title="高级参数（隔离配置）" width="520px">
-        <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
-        <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
-        <div class="section-label small">补充说明（可选）</div>
-        <el-input v-model="config.custom_instructions" type="textarea" :rows="4"
-          placeholder="如：重点关注支付流程、用例需包含并发场景..." />
+      <el-dialog v-model="advancedDialogVisible" title="高级参数配置" width="520px" class="advanced-dialog">
+        <div class="advanced-dialog-body">
+          <div class="advanced-item">
+            <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
+            <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
+            <div class="advanced-tip">值越低越稳健，值越高越发散。</div>
+          </div>
+          <div class="advanced-item">
+            <div class="section-label small">补充说明</div>
+            <el-input v-model="config.custom_instructions" type="textarea" :rows="4"
+              placeholder="如：重点关注支付流程、用例需包含并发场景..." />
+          </div>
+        </div>
       </el-dialog>
       </div>
 
@@ -355,15 +362,16 @@ function providerName(p: string): string {
   flex-shrink: 0;
 }
 
-.panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
 .config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 0; }
-.advanced-icon-btn { width: 30px; height: 30px; }
+.advanced-icon-btn { width: 32px; height: 32px; border-color: #dbe3ff; background: #f5f7ff; color: #4f6ef7; }
 .section-label {
   font-size: 13px; font-weight: 500; color: var(--text-secondary);
-  margin: 16px 0 8px;
+  margin: 20px 0 10px;
   display: flex; align-items: center; gap: 8px;
 }
 .section-label.small { margin-top: 12px; }
+.required-mark { color: #ef4444; font-size: 14px; font-weight: 700; line-height: 1; }
 .sec-index {
   width: 18px;
   height: 18px;
@@ -376,6 +384,9 @@ function providerName(p: string): string {
   background: #4f6ef7;
 }
 .temp-val { color: #4f6ef7; font-weight: 700; }
+.config-body :deep(.el-select),
+.config-body :deep(.el-radio-group),
+.config-body :deep(.el-checkbox-group) { margin-bottom: 6px; }
 
 .type-group { width: 100%; display: flex; }
 .type-group :deep(.el-radio-button) { flex: 1; }
@@ -388,6 +399,12 @@ function providerName(p: string): string {
 .footer-actions { display: flex; gap: 8px; }
 .footer-actions .el-button { flex: 1; }
 .footer-hint { margin-top: 8px; font-size: 12px; color: #6b7280; }
+.advanced-dialog-body { display: grid; gap: 14px; }
+.advanced-item { border: 1px solid #e6eaf5; border-radius: 10px; padding: 12px; background: #fafbff; }
+.advanced-item .section-label.small { margin: 0 0 10px; }
+.advanced-tip { margin-top: 8px; font-size: 12px; color: #64748b; }
+:deep(.advanced-dialog .el-dialog__header) { border-bottom: 1px solid #edf0f7; margin-right: 0; padding-bottom: 14px; }
+:deep(.advanced-dialog .el-dialog__body) { padding-top: 14px; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
