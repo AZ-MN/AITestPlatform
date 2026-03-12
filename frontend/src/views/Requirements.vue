@@ -1,10 +1,32 @@
 <template>
   <div class="req-page">
     <div class="page-header">
-      <h2>需求管理</h2>
+      <div>
+        <h2>需求管理</h2>
+        <div class="sub-title">上传或录入需求，解析后可一键进入智能生成</div>
+      </div>
       <div class="header-actions">
         <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
         <el-button type="primary" :icon="Plus" @click="showText = true">手动输入</el-button>
+      </div>
+    </div>
+
+    <div class="req-overview page-card">
+      <div class="ov-item">
+        <div class="ov-label">需求总数</div>
+        <div class="ov-value">{{ requirements.length }}</div>
+      </div>
+      <div class="ov-item">
+        <div class="ov-label">已解析</div>
+        <div class="ov-value">{{ parsedCount }}</div>
+      </div>
+      <div class="ov-item">
+        <div class="ov-label">解析中/失败</div>
+        <div class="ov-value">{{ pendingCount }}/{{ failedCount }}</div>
+      </div>
+      <div class="ov-item">
+        <div class="ov-label">需求点总数</div>
+        <div class="ov-value">{{ pointsTotal }}</div>
       </div>
     </div>
 
@@ -19,32 +41,34 @@
       </div>
     </div>
 
-    <el-table v-else v-loading="loading" :data="requirements" row-class-name="req-row" @row-click="handleReqRowClick">
-      <el-table-column label="需求标题" prop="title" min-width="200" show-overflow-tooltip />
-      <el-table-column label="来源" width="90">
-        <template #default="{ row }">
-          <el-tag size="small" :type="row.source_type === 'file' ? 'primary' : 'success'">
-            {{ row.source_type === 'file' ? '文档' : '手动' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="需求点数" width="90" align="center">
-        <template #default="{ row }">
-          <el-tag size="small" type="warning">{{ row.req_points_count }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 'parsed' ? 'success' : row.status === 'parsing' ? 'warning' : 'danger'" size="small">
-            {{ ({'parsed':'已解析', 'parsing':'解析中', 'failed':'失败'} as Record<string,string>)[row.status] || row.status }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建人" prop="creator_name" width="100" />
-      <el-table-column label="创建时间" width="160">
-        <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
-      </el-table-column>
-    </el-table>
+    <div v-else class="page-card table-card">
+      <el-table v-loading="loading" :data="requirements" row-class-name="req-row" @row-click="handleReqRowClick">
+        <el-table-column label="需求标题" prop="title" min-width="200" show-overflow-tooltip />
+        <el-table-column label="来源" width="90">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.source_type === 'file' ? 'primary' : 'success'">
+              {{ row.source_type === 'file' ? '文档' : '手动' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="需求点数" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" type="warning">{{ row.req_points_count }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'parsed' ? 'success' : row.status === 'parsing' ? 'warning' : 'danger'" size="small">
+              {{ ({'parsed':'已解析', 'parsing':'解析中', 'failed':'失败'} as Record<string,string>)[row.status] || row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建人" prop="creator_name" width="100" />
+        <el-table-column label="创建时间" width="160">
+          <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <!-- 上传文档弹窗 -->
     <el-dialog v-model="showUpload" title="上传需求文档" width="500px" :close-on-click-modal="false">
@@ -173,6 +197,10 @@ const uploadFile = ref<File | null>(null)
 
 const uploadForm = reactive({ title: '', useAi: true })
 const textForm = reactive({ title: '', content: '', useAi: true })
+const parsedCount = computed(() => requirements.value.filter(r => r.status === 'parsed').length)
+const pendingCount = computed(() => requirements.value.filter(r => r.status === 'parsing').length)
+const failedCount = computed(() => requirements.value.filter(r => r.status === 'failed').length)
+const pointsTotal = computed(() => requirements.value.reduce((s, r) => s + (r.req_points_count || 0), 0))
 
 onMounted(fetchReqs)
 
@@ -292,7 +320,19 @@ function fmtDate(s: string) {
 .req-page { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
+.sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 .header-actions { display: flex; gap: 8px; }
+.req-overview {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+.ov-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #fafbfc; }
+.ov-label { font-size: 12px; color: #6b7280; }
+.ov-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+.table-card { padding: 0; overflow: hidden; }
 
 .empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; border: 1px solid var(--border); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
@@ -321,4 +361,7 @@ function fmtDate(s: string) {
 .point-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .point-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .rule-tag { font-size: 11px; background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 4px; }
+@media (max-width: 900px) {
+  .req-overview { grid-template-columns: repeat(2, 1fr); }
+}
 </style>

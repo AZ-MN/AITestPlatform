@@ -1,7 +1,14 @@
 <template>
   <div class="generate-page">
     <div class="page-header">
-      <h2>智能生成测试用例</h2>
+      <div>
+        <h2>智能生成测试用例</h2>
+        <div class="sub-title">选择需求后按场景生成，支持 AI 与规则引擎双模式</div>
+      </div>
+      <div class="header-actions">
+        <el-button @click="resetConfig">重置配置</el-button>
+        <el-button type="primary" plain @click="router.push(`/projects/${projectId}/requirements`)">去需求管理</el-button>
+      </div>
     </div>
 
     <div class="generate-layout">
@@ -26,6 +33,7 @@
 
         <div v-if="reqPoints.length" class="req-summary">
           <el-tag type="success" size="small">{{ reqPoints.length }} 个需求点已加载</el-tag>
+          <div class="summary-title">{{ selectedReqTitle }}</div>
           <div class="module-filter-row">
             <span>模块筛选：</span>
             <el-select v-model="config.module_filter" placeholder="全部模块" clearable size="small" style="flex:1">
@@ -167,6 +175,7 @@ const filteredPoints = computed(() => {
 })
 
 const tempMarks = { 0: '严谨', 0.5: '均衡', 1: '发散' }
+const selectedReqTitle = computed(() => requirements.value.find(r => r.id === config.requirement_id)?.title || '')
 
 onMounted(async () => {
   requirements.value = await requirementApi.list(projectId.value)
@@ -190,6 +199,21 @@ async function onReqChange(id?: number) {
   if (!id) { reqPoints.value = []; return }
   const req = await requirementApi.get(id)
   reqPoints.value = (req.parse_result as RequirementPoint[]) || []
+}
+
+function resetConfig() {
+  Object.assign(config, {
+    requirement_id: undefined,
+    test_type: 'functional',
+    granularity: 'medium',
+    cover_scenarios: ['normal', 'exception', 'boundary'],
+    ai_provider: modelConfigs.value[0]?.provider,
+    temperature: 0.3,
+    custom_instructions: '',
+    module_filter: undefined,
+  })
+  reqPoints.value = []
+  lastResult.value = null
 }
 
 async function handleGenerate() {
@@ -288,10 +312,13 @@ function providerName(p: string): string {
 
 <style scoped>
 .generate-page { width: 100%; max-width: none; }
-.page-header { margin-bottom: 20px; }
+.page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
+.sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
+.header-actions { display: flex; gap: 8px; }
 
 .generate-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+.config-panel { position: sticky; top: 12px; }
 
 .config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
 .section-label {
@@ -308,6 +335,7 @@ function providerName(p: string): string {
 .scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
 .req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
+.summary-title { margin-top: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .module-filter-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 
 .result-summary { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
@@ -322,4 +350,11 @@ function providerName(p: string): string {
 .rp-id { font-size: 11px; font-family: monospace; color: #9ca3af; }
 .rp-module { font-size: 11px; color: #9ca3af; }
 .rp-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
+@media (max-width: 1024px) {
+  .generate-layout { grid-template-columns: 1fr; }
+  .config-panel { position: static; }
+}
+@media (max-width: 768px) {
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
 </style>

@@ -1,11 +1,22 @@
 <template>
   <div class="case-library">
     <div class="page-header">
-      <h2>用例库</h2>
+      <div>
+        <h2>用例库</h2>
+        <div class="sub-title">支持批量评审、最小回归集筛选与多格式导出</div>
+      </div>
       <div class="header-actions">
         <el-button :icon="Download" @click="showExport = true">导出</el-button>
         <el-button type="primary" :icon="Plus" @click="showCreate = true">新建用例</el-button>
       </div>
+    </div>
+
+    <div class="overview page-card">
+      <span class="ov-pill">当前页 {{ cases.length }} 条</span>
+      <span class="ov-pill">总量 {{ total }} 条</span>
+      <span class="ov-pill">待评审 {{ pendingCount }} 条</span>
+      <span class="ov-pill" v-if="selectedIds.length">已选 {{ selectedIds.length }} 条</span>
+      <span class="ov-pill ov-warn" v-if="regressionMode">最小回归集模式</span>
     </div>
 
     <!-- 筛选栏 -->
@@ -246,6 +257,7 @@ const exporting = ref(false)
 const exportFmt = ref('excel')
 const exportScope = ref('all')
 const regressionMode = ref(false)
+const pendingCount = computed(() => cases.value.filter(c => c.status === 'pending_review').length)
 
 const filters = reactive({
   keyword: '', test_type: '', case_level: '', status: ''
@@ -508,7 +520,24 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 
 .case-library { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
+.sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 .header-actions { display: flex; gap: 8px; }
+.overview {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+}
+.ov-pill {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+.ov-warn { color: #b45309; border-color: #fcd34d; background: #fffbeb; }
 
 .filter-bar {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;

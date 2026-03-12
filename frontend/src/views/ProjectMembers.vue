@@ -1,8 +1,18 @@
 <template>
   <div class="members-page">
     <div class="page-header">
-      <h2>项目成员</h2>
+      <div>
+        <h2>项目成员</h2>
+        <div class="sub-title">管理成员角色，保障评审与协作流程稳定运行</div>
+      </div>
       <el-button type="primary" @click="openAdd">添加成员</el-button>
+    </div>
+
+    <div class="overview page-card">
+      <div class="ov-item"><span>成员总数</span><strong>{{ members.length }}</strong></div>
+      <div class="ov-item"><span>管理员</span><strong>{{ adminCount }}</strong></div>
+      <div class="ov-item"><span>测试工程师</span><strong>{{ testerCount }}</strong></div>
+      <div class="ov-item"><span>访客</span><strong>{{ viewerCount }}</strong></div>
     </div>
 
     <div class="page-card">
@@ -11,7 +21,7 @@
         <el-table-column prop="username" label="用户名" width="140" />
         <el-table-column prop="role" label="角色" width="140">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.role }}</el-tag>
+            <el-tag size="small" :type="roleType(row.role)">{{ roleLabel(row.role) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="加入时间" width="180">
@@ -73,6 +83,9 @@ const showAdd = ref(false)
 const members = ref<ProjectMember[]>([])
 const users = ref<User[]>([])
 const form = reactive({ user_id: undefined as number | undefined, role: 'tester' })
+const adminCount = computed(() => members.value.filter(m => m.role === 'project_admin').length)
+const testerCount = computed(() => members.value.filter(m => m.role === 'tester').length)
+const viewerCount = computed(() => members.value.filter(m => m.role === 'viewer').length)
 
 const candidateUsers = computed(() => {
   const joined = new Set(members.value.map(m => m.user_id))
@@ -123,4 +136,41 @@ async function remove(member: ProjectMember) {
 function fmtDate(s: string) {
   return new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
 }
+
+function roleLabel(role: string) {
+  return ({ project_admin: '项目管理员', tester: '测试工程师', viewer: '访客' } as Record<string, string>)[role] || role
+}
+
+function roleType(role: string): 'success' | 'warning' | 'info' {
+  return ({ project_admin: 'success', tester: 'warning', viewer: 'info' } as Record<string, 'success' | 'warning' | 'info'>)[role] || 'info'
+}
 </script>
+
+<style scoped>
+.members-page { width: 100%; max-width: none; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-header h2 { font-size: 22px; font-weight: 700; }
+.sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+.overview {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+.ov-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafbfc;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
+.ov-item strong { font-size: 20px; color: #111827; }
+@media (max-width: 900px) {
+  .overview { grid-template-columns: repeat(2, 1fr); }
+}
+</style>

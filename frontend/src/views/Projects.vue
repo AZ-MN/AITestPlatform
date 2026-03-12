@@ -1,13 +1,27 @@
 <template>
   <div class="projects-page">
     <div class="page-header">
-      <h2>项目管理</h2>
+      <div>
+        <h2>项目管理</h2>
+        <div class="sub-title">统一管理项目资产与协作成员，点击卡片可直接进入项目</div>
+      </div>
       <el-button type="primary" :icon="Plus" @click="showCreate = true">新建项目</el-button>
+    </div>
+
+    <div class="toolbar page-card">
+      <el-input
+        v-model="keyword"
+        placeholder="搜索项目名称..."
+        clearable
+        style="width:260px"
+      />
+      <el-segmented v-model="statusFilter" :options="statusOptions" />
+      <span class="toolbar-stat">共 {{ filteredProjects.length }} / {{ projectStore.projects.length }} 个项目</span>
     </div>
 
     <div class="project-grid">
       <div
-        v-for="p in projectStore.projects"
+        v-for="p in filteredProjects"
         :key="p.id"
         class="project-card"
         tabindex="0"
@@ -86,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Edit, Delete, FolderRemove, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -102,8 +116,23 @@ const saving = ref(false)
 const editId = ref<number>()
 const formRef = ref()
 const icons = ['📋', '🛒', '🏦', '🏥', '🎮', '📱', '💼', '🚀', '🔧', '🌐', '📊', '🤖']
+const keyword = ref('')
+const statusFilter = ref<'all' | 'active' | 'archived'>('all')
+const statusOptions = [
+  { label: '全部', value: 'all' },
+  { label: '进行中', value: 'active' },
+  { label: '已归档', value: 'archived' },
+]
 
 const form = reactive({ name: '', description: '', icon: '📋' })
+const filteredProjects = computed(() => {
+  const key = keyword.value.trim().toLowerCase()
+  return projectStore.projects.filter(p => {
+    const statusOk = statusFilter.value === 'all' || p.status === statusFilter.value
+    const keyOk = !key || p.name.toLowerCase().includes(key)
+    return statusOk && keyOk
+  })
+})
 
 onMounted(() => projectStore.fetchProjects())
 
@@ -220,6 +249,15 @@ async function deleteProject(p: Project) {
 .projects-page { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
+.sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
+.toolbar {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.toolbar-stat { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
 
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
@@ -320,6 +358,8 @@ async function deleteProject(p: Project) {
 .icon-opt:hover { border-color: #4f6ef7; }
 
 @media (max-width: 768px) {
+  .toolbar { flex-wrap: wrap; }
+  .toolbar-stat { margin-left: 0; }
   .top-right { gap: 4px; }
 }
 </style>
