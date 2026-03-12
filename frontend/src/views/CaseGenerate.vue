@@ -124,7 +124,12 @@
               <span>创造性（Temperature）</span>
               <span class="temp-val">{{ config.temperature.toFixed(1) }}</span>
             </div>
-            <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
+            <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" />
+            <div class="temp-scale-labels">
+              <span>严谨</span>
+              <span>均衡</span>
+              <span>发散</span>
+            </div>
             <div class="advanced-tip">低温度更稳定，高温度更发散；建议先用预设再微调。</div>
           </div>
         </div>
@@ -241,7 +246,6 @@ const mindmapData = computed(() => {
   }]
 })
 
-const tempMarks = { 0: '严谨', 0.5: '均衡', 1: '发散' }
 const selectedReqTitle = computed(() => requirements.value.find(r => r.id === config.requirement_id)?.title || '')
 const temperatureLabel = computed(() => {
   if (config.temperature <= 0.3) return '稳健生成'
@@ -464,6 +468,7 @@ function providerName(p: string): string {
 .preset-desc { display: block; margin-top: 4px; font-size: 12px; color: #64748b; line-height: 1.4; }
 .advanced-item { border: 1px solid #e6eaf5; border-radius: 10px; padding: 14px; background: #fafbff; }
 .temp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: #4b5563; }
+.temp-scale-labels { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #64748b; font-size: 12px; padding: 0 1px; }
 .advanced-tip { margin-top: 14px; font-size: 12px; color: #64748b; line-height: 1.45; }
 .advanced-footer { display: flex; justify-content: flex-end; gap: 8px; }
 :deep(.advanced-dialog .el-dialog) { border-radius: 12px; overflow: hidden; }
@@ -480,7 +485,6 @@ function providerName(p: string): string {
   background: #3b82f6;
   box-shadow: 0 0 0 2px #3b82f6, 0 2px 8px rgba(59, 130, 246, 0.35);
 }
-:deep(.advanced-dialog .el-slider__marks-text) { color: #64748b; font-size: 12px; margin-top: 10px; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
