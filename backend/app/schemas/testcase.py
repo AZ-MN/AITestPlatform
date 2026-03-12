@@ -75,7 +75,8 @@ class GenerateRequest(BaseModel):
     template_id: Optional[int] = None
     ai_provider: Optional[str] = None       # 使用哪个AI供应商
     temperature: float = 0.3
-    custom_instructions: Optional[str] = None  # 用户补充的生成说明
+    case_prompt: Optional[str] = None       # 用例提示词（主提示）
+    custom_instructions: Optional[str] = None  # 兼容旧字段（不再作为主提示）
     module_filter: Optional[str] = None     # 仅针对指定模块生成
 
 

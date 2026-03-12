@@ -16,7 +16,7 @@ from app.schemas.testcase import (
 )
 from app.services.ai_service import (
     AIAdapter, SYSTEM_PROMPT_CASE_GEN, SYSTEM_PROMPT_API_CASE,
-    build_case_gen_prompt, parse_ai_json_response
+    parse_ai_json_response
 )
 from app.services.export_service import export_cases
 
@@ -190,13 +190,37 @@ async def generate_cases(
 
     # 选择对应 Prompt
     system_prompt = SYSTEM_PROMPT_API_CASE if gen_req.test_type == "api" else SYSTEM_PROMPT_CASE_GEN
-    user_msg = build_case_gen_prompt(
-        req_points=req_points,
-        test_type=gen_req.test_type,
-        granularity=gen_req.granularity,
-        cover_scenarios=gen_req.cover_scenarios,
-        custom_instructions=gen_req.custom_instructions or "",
-    )
+    case_prompt = (gen_req.case_prompt or "").strip()
+    if not case_prompt:
+        raise HTTPException(status_code=400, detail="请先填写用例提示词")
+    scenario_map = {
+        "normal": "正常流程",
+        "exception": "异常/错误场景",
+        "boundary": "边界值",
+        "permission": "权限控制",
+        "compatibility": "兼容性",
+        "security": "数据安全",
+    }
+    scenario_desc = "、".join(scenario_map.get(s, s) for s in gen_req.cover_scenarios)
+    user_msg = f"""用例提示词：
+{case_prompt}
+
+生成约束：
+- 测试类型：{gen_req.test_type}
+- 颗粒度：{gen_req.granularity}
+- 覆盖场景：{scenario_desc}
+
+需求点清单：
+"""
+    for rp in req_points:
+        user_msg += f"\n【{rp.get('id', 'REQ')}】{rp.get('title', '')}\n"
+        user_msg += f"描述：{rp.get('description', '')}\n"
+        if rp.get("module"):
+            user_msg += f"模块：{rp.get('module')}\n"
+        if rp.get("rules"):
+            user_msg += f"业务规则：{'; '.join(str(r) for r in rp['rules'])}\n"
+        if rp.get("conditions"):
+            user_msg += f"前置条件：{'; '.join(str(c) for c in rp['conditions'])}\n"
 
     generation_mode = "ai"
     ai_cases: List[dict] = []

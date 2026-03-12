@@ -61,7 +61,15 @@
             <el-radio value="fine">细（按单一场景）</el-radio>
           </el-radio-group>
 
-          <div class="section-label"><span class="sec-index">6</span>选择覆盖场景</div>
+          <div class="section-label"><span class="sec-index">6</span>用例提示词<span class="required-mark">*</span></div>
+          <el-input
+            v-model="config.case_prompt"
+            type="textarea"
+            :rows="4"
+            placeholder="请描述你期望的用例风格与重点，例如：按资深测试工程师思路，优先覆盖核心链路、异常流程和边界条件，步骤简洁明确。"
+          />
+
+          <div class="section-label"><span class="sec-index">7</span>选择覆盖场景</div>
           <el-checkbox-group v-model="config.cover_scenarios" class="scenario-group">
             <el-checkbox value="normal">正常流程</el-checkbox>
             <el-checkbox value="exception">异常场景</el-checkbox>
@@ -94,11 +102,6 @@
             <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
             <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
             <div class="advanced-tip">值越低越稳健，值越高越发散。</div>
-          </div>
-          <div class="advanced-item">
-            <div class="section-label small">补充说明</div>
-            <el-input v-model="config.custom_instructions" type="textarea" :rows="4"
-              placeholder="如：重点关注支付流程、用例需包含并发场景..." />
           </div>
         </div>
       </el-dialog>
@@ -164,12 +167,12 @@ const config = reactive({
   cover_scenarios: ['normal', 'exception', 'boundary'],
   ai_provider: undefined as string | undefined,
   temperature: 0.3,
-  custom_instructions: '',
+  case_prompt: '',
   module_filter: undefined as string | undefined,
 })
 
 const canGenerate = computed(() =>
-  !!config.ai_provider && reqPoints.value.length > 0 && modelConfigs.value.length > 0
+  !!config.ai_provider && reqPoints.value.length > 0 && modelConfigs.value.length > 0 && !!config.case_prompt.trim()
 )
 
 const modules = computed(() => {
@@ -243,7 +246,7 @@ function resetConfig() {
     cover_scenarios: ['normal', 'exception', 'boundary'],
     ai_provider: modelConfigs.value[0]?.provider,
     temperature: 0.3,
-    custom_instructions: '',
+    case_prompt: '',
     module_filter: undefined,
   })
   reqPoints.value = []
@@ -253,6 +256,7 @@ function resetConfig() {
 async function handleGenerate() {
   if (!reqPoints.value.length) return ElMessage.warning('请先选择需求来源')
   if (!config.ai_provider || !modelConfigs.value.length) return ElMessage.warning('请先选择可用模型')
+  if (!config.case_prompt.trim()) return ElMessage.warning('请填写用例提示词')
   generating.value = true
   lastResult.value = null
   const startAt = Date.now()
@@ -266,7 +270,7 @@ async function handleGenerate() {
       cover_scenarios: config.cover_scenarios,
       ai_provider: config.ai_provider,
       temperature: config.temperature,
-      custom_instructions: config.custom_instructions,
+      case_prompt: config.case_prompt,
       module_filter: config.module_filter,
     }
     const result: any = await caseApi.generate(payload)
@@ -352,10 +356,15 @@ function providerName(p: string): string {
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 
 .generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
-.left-column { min-height: 0; min-width: 0; overflow: hidden; }
+.left-column { min-height: 0; min-width: 0; overflow: hidden; display: flex; }
 .config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+.config-panel { flex: 1; height: 100%; }
 .config-body, .preview-body { flex: 1; min-height: 0; overflow: auto; overflow-x: hidden; padding-right: 2px; }
 .config-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #fff;
   border-top: 1px solid var(--border);
   padding-top: 12px;
   margin-top: 12px;
@@ -386,7 +395,8 @@ function providerName(p: string): string {
 .temp-val { color: #4f6ef7; font-weight: 700; }
 .config-body :deep(.el-select),
 .config-body :deep(.el-radio-group),
-.config-body :deep(.el-checkbox-group) { margin-bottom: 6px; }
+.config-body :deep(.el-checkbox-group),
+.config-body :deep(.el-textarea) { margin-bottom: 8px; }
 
 .type-group { width: 100%; display: flex; }
 .type-group :deep(.el-radio-button) { flex: 1; }

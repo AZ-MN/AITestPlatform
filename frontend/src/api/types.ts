@@ -124,7 +124,7 @@ export interface GenerateRequest {
   cover_scenarios?: string[]
   ai_provider?: string
   temperature?: number
-  custom_instructions?: string
+  case_prompt?: string
   module_filter?: string
 }
 
