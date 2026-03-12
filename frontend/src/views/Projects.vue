@@ -246,7 +246,7 @@ async function deleteProject(p: Project) {
 </script>
 
 <style scoped>
-.projects-page { width: 100%; max-width: none; }
+.projects-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
@@ -259,7 +259,15 @@ async function deleteProject(p: Project) {
 }
 .toolbar-stat { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
 
-.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
 .project-card {
   background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
   border: 1px solid #e5e7eb;

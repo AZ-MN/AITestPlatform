@@ -202,8 +202,11 @@ async function handleCommand(cmd: string) {
 
 .app-main {
   background: var(--bg);
-  overflow-y: auto;
+  overflow: hidden;
   padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .app-main :deep(.dashboard),

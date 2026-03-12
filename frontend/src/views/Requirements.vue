@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2>需求管理</h2>
-        <div class="sub-title">上传或录入需求，解析后可一键进入智能生成</div>
+        <div class="sub-title">上传或录入需求后在当前模块完成查看与编辑</div>
       </div>
       <div class="header-actions">
         <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
@@ -160,10 +160,6 @@
       <div class="points-actions">
         <el-button v-if="editingReq" @click="toggleEditReq">取消</el-button>
         <el-button v-if="editingReq" type="primary" :loading="savingReqEdit" @click="saveReqEdit">保存需求</el-button>
-        <el-button size="small" type="success"
-          @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
-          生成测试用例
-        </el-button>
       </div>
     </el-drawer>
   </div>
@@ -171,14 +167,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { Plus, Upload, Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import type { Requirement, RequirementPoint } from '@/api/types'
 
 const route = useRoute()
-const router = useRouter()
 const projectId = computed(() => Number(route.params.id))
 const requirements = ref<Requirement[]>([])
 const loading = ref(false)
@@ -317,7 +312,7 @@ function fmtDate(s: string) {
 </script>
 
 <style scoped>
-.req-page { width: 100%; max-width: none; }
+.req-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
@@ -333,6 +328,9 @@ function fmtDate(s: string) {
 .ov-label { font-size: 12px; color: #6b7280; }
 .ov-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
 .table-card { padding: 0; overflow: hidden; }
+.table-card { flex: 1; min-height: 0; display: flex; }
+.table-card :deep(.el-table) { height: 100%; }
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
 
 .empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; border: 1px solid var(--border); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }

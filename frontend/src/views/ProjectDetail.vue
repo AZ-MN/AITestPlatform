@@ -19,7 +19,9 @@
         <router-link :to="`/projects/${projectStore.current.id}/members`" class="tab" :class="{ active: route.path.includes('/members') }">项目成员</router-link>
       </div>
     </div>
-    <router-view />
+    <div class="detail-content">
+      <router-view />
+    </div>
   </div>
 </template>
 
@@ -43,7 +45,8 @@ watch(() => route.params.id, loadProject)
 </script>
 
 <style scoped>
-.project-detail { display: flex; flex-direction: column; gap: 12px; }
+.project-detail { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
+.detail-content { flex: 1; min-height: 0; overflow: hidden; }
 .project-nav {
   display: flex;
   align-items: center;

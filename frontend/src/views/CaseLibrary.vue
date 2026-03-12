@@ -64,7 +64,6 @@
         @selection-change="handleSelect"
         @row-click="handleCaseRowClick"
         row-key="id"
-        max-height="calc(100vh - 320px)"
       >
         <el-table-column type="selection" width="44" />
         <el-table-column label="用例ID" prop="case_id" width="130" fixed>
@@ -517,7 +516,7 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 
 </script>
 
 <style scoped>
-.case-library { width: 100%; max-width: none; }
+.case-library { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
@@ -545,7 +544,8 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 
 }
 .filter-stats { margin-left: auto; font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
 
-.table-wrap { padding: 0; overflow: hidden; }
+.table-wrap { padding: 0; overflow: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.table-wrap :deep(.el-table) { flex: 1; }
 .pagination { padding: 12px 16px; display: flex; justify-content: flex-end; }
 
 .case-id { font-family: monospace; font-size: 12px; color: #6b7280; }

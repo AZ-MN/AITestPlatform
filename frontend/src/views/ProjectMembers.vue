@@ -15,7 +15,7 @@
       <div class="ov-item"><span>访客</span><strong>{{ viewerCount }}</strong></div>
     </div>
 
-    <div class="page-card">
+    <div class="page-card table-card">
       <el-table :data="members" v-loading="loading">
         <el-table-column prop="full_name" label="姓名" min-width="140" />
         <el-table-column prop="username" label="用户名" width="140" />
@@ -147,7 +147,7 @@ function roleType(role: string): 'success' | 'warning' | 'info' {
 </script>
 
 <style scoped>
-.members-page { width: 100%; max-width: none; }
+.members-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
@@ -170,6 +170,8 @@ function roleType(role: string): 'success' | 'warning' | 'info' {
   color: #6b7280;
 }
 .ov-item strong { font-size: 20px; color: #111827; }
+.table-card { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.table-card :deep(.el-table) { height: 100%; }
 @media (max-width: 900px) {
   .overview { grid-template-columns: repeat(2, 1fr); }
 }

@@ -3,11 +3,10 @@
     <div class="page-header">
       <div>
         <h2>智能生成测试用例</h2>
-        <div class="sub-title">选择需求后按场景生成，支持 AI 与规则引擎双模式</div>
+        <div class="sub-title">在当前页面完成配置、生成与结果查看，减少跨模块跳转</div>
       </div>
       <div class="header-actions">
         <el-button @click="resetConfig">重置配置</el-button>
-        <el-button type="primary" plain @click="router.push(`/projects/${projectId}/requirements`)">去需求管理</el-button>
       </div>
     </div>
 
@@ -96,9 +95,7 @@
           <el-result icon="success" :title="`生成完成`"
             :sub-title="`共 ${lastResult.total} 条用例，耗时 ${lastResult.elapsed_seconds}s`">
             <template #extra>
-              <el-button type="primary" @click="$router.push(`/projects/${projectId}/cases?batch=${lastResult.batch_id}`)">
-                查看生成结果
-              </el-button>
+              <span class="result-tip">可切换顶部「用例库」标签查看生成结果</span>
             </template>
           </el-result>
         </div>
@@ -112,9 +109,6 @@
         </div>
         <div v-if="!filteredPoints.length" class="preview-empty">
           <p>{{ requirements.length ? '请先在左侧选择需求来源' : '当前项目还没有需求，先去需求管理录入内容' }}</p>
-          <el-button v-if="!requirements.length" type="primary" plain @click="router.push(`/projects/${projectId}/requirements`)">
-            去需求管理
-          </el-button>
         </div>
         <div v-else class="preview-list">
           <div v-for="(p, i) in filteredPoints" :key="i" class="req-point">
@@ -133,7 +127,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import { caseApi } from '@/api/cases'
@@ -141,7 +135,6 @@ import { modelApi } from '@/api/models'
 import type { Requirement, RequirementPoint, AIModelConfig } from '@/api/types'
 
 const route = useRoute()
-const router = useRouter()
 const projectId = computed(() => Number(route.params.id))
 const requirements = ref<Requirement[]>([])
 const modelConfigs = ref<AIModelConfig[]>([])
@@ -311,14 +304,15 @@ function providerName(p: string): string {
 </script>
 
 <style scoped>
-.generate-page { width: 100%; max-width: none; }
+.generate-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 .header-actions { display: flex; gap: 8px; }
 
-.generate-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
-.config-panel { position: sticky; top: 12px; }
+.generate-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; flex: 1; min-height: 0; }
+.config-panel { min-height: 0; overflow: auto; }
+.preview-panel { min-height: 0; overflow: auto; }
 
 .config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
 .section-label {
@@ -339,11 +333,12 @@ function providerName(p: string): string {
 .module-filter-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
 
 .result-summary { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
+.result-tip { font-size: 12px; color: #6b7280; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
 .preview-empty { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
-.preview-list { max-height: calc(100vh - 200px); overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.preview-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 
 .req-point { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
 .rp-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
@@ -352,7 +347,6 @@ function providerName(p: string): string {
 .rp-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
 @media (max-width: 1024px) {
   .generate-layout { grid-template-columns: 1fr; }
-  .config-panel { position: static; }
 }
 @media (max-width: 768px) {
   .page-header { flex-direction: column; align-items: flex-start; }
