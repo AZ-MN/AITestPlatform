@@ -1,0 +1,1 @@
+import{ao as o}from"./index-Capk7SIK.js";const d={providers:()=>o.get("/models/providers"),list:()=>o.get("/models"),add:e=>o.post("/models",e),update:(e,t)=>o.put(`/models/${e}`,t),remove:e=>o.delete(`/models/${e}`),test:e=>o.post(`/models/${e}/test`)};export{d as m};
