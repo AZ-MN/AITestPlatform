@@ -10,13 +10,6 @@
       </div>
     </div>
 
-    <div class="quick-bar page-card">
-      <span class="quick-pill">需求：{{ requirements.length }}</span>
-      <span class="quick-pill">已加载点：{{ filteredPoints.length }}</span>
-      <span class="quick-pill">模式：{{ modelConfigs.length ? 'AI + 规则' : '规则引擎' }}</span>
-      <span class="quick-pill">颗粒度：{{ config.granularity }}</span>
-    </div>
-
     <div class="generate-layout">
       <!-- 左：生成配置 -->
       <div class="config-panel page-card">
@@ -31,8 +24,7 @@
             style="margin-bottom:12px"
           />
 
-          <!-- 需求来源 -->
-          <div class="section-label">需求来源</div>
+          <div class="section-label"><span class="sec-index">1</span>选择需求来源</div>
           <el-select v-model="config.requirement_id" placeholder="选择已解析的需求" clearable style="width:100%"
             @change="onReqChange">
             <el-option v-for="r in requirements" :key="r.id" :label="`${r.title} (${r.req_points_count}点)`" :value="r.id" />
@@ -41,32 +33,32 @@
           <div v-if="reqPoints.length" class="req-summary">
             <el-tag type="success" size="small">{{ reqPoints.length }} 个需求点已加载</el-tag>
             <div class="summary-title">{{ selectedReqTitle }}</div>
-            <div class="module-filter-row">
-              <span>模块筛选：</span>
-              <el-select v-model="config.module_filter" placeholder="全部模块" clearable size="small" style="flex:1">
-                <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
-              </el-select>
-            </div>
           </div>
 
-          <!-- 生成类型 -->
-          <div class="section-label">测试类型</div>
+          <div class="section-label"><span class="sec-index">2</span>确定本次生成目标</div>
           <el-radio-group v-model="config.test_type" class="type-group">
             <el-radio-button value="functional">功能测试</el-radio-button>
             <el-radio-button value="api">接口测试</el-radio-button>
             <el-radio-button value="unit">单元测试</el-radio-button>
           </el-radio-group>
 
-          <!-- 颗粒度 -->
-          <div class="section-label">用例颗粒度</div>
+          <div class="section-label small">用例颗粒度</div>
           <el-radio-group v-model="config.granularity">
             <el-radio value="coarse">粗（按流程）</el-radio>
             <el-radio value="medium">中（按功能点）</el-radio>
             <el-radio value="fine">细（按单一场景）</el-radio>
           </el-radio-group>
 
-          <!-- 覆盖场景 -->
-          <div class="section-label">覆盖场景</div>
+          <div class="section-label small">覆盖模块（可选）</div>
+          <el-select v-model="config.module_filter" placeholder="全部模块" clearable style="width:100%">
+            <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
+          </el-select>
+
+          <div class="section-label"><span class="sec-index">3</span>选择覆盖场景</div>
+          <div class="scenario-shortcuts">
+            <el-button size="small" @click="setBasicScenarios">基础场景</el-button>
+            <el-button size="small" @click="setAllScenarios">全场景</el-button>
+          </div>
           <el-checkbox-group v-model="config.cover_scenarios" class="scenario-group">
             <el-checkbox value="normal">正常流程</el-checkbox>
             <el-checkbox value="exception">异常场景</el-checkbox>
@@ -76,33 +68,37 @@
             <el-checkbox value="security">数据安全</el-checkbox>
           </el-checkbox-group>
 
-          <!-- AI 模型 -->
-          <div class="section-label">AI 模型</div>
-          <el-select v-model="config.ai_provider" placeholder="选择AI供应商" style="width:100%">
-            <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
-              :label="`${providerName(m.provider)} · ${m.model_name}`" />
-            <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
-          </el-select>
+          <el-collapse class="advanced-collapse" v-model="advancedPanels">
+            <el-collapse-item title="高级参数（可选）" name="advanced">
+              <div class="section-label small">AI 模型</div>
+              <el-select v-model="config.ai_provider" placeholder="选择AI供应商" style="width:100%">
+                <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
+                  :label="`${providerName(m.provider)} · ${m.model_name}`" />
+                <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
+              </el-select>
 
-          <!-- Temperature -->
-          <div class="section-label">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
-          <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
+              <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
+              <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
 
-          <!-- 补充说明 -->
-          <div class="section-label">补充说明（可选）</div>
-          <el-input v-model="config.custom_instructions" type="textarea" :rows="2"
-            placeholder="如：重点关注支付流程、用例需包含并发场景..." />
+              <div class="section-label small">补充说明（可选）</div>
+              <el-input v-model="config.custom_instructions" type="textarea" :rows="2"
+                placeholder="如：重点关注支付流程、用例需包含并发场景..." />
+            </el-collapse-item>
+          </el-collapse>
         </div>
 
         <div class="config-footer">
-          <el-button type="primary" size="large" :loading="generating" :disabled="!canGenerate"
-            style="width:100%" @click="handleGenerate">
-            <el-icon v-if="!generating"><MagicStick /></el-icon>
-            {{ generating ? 'AI 生成中...' : '开始生成' }}
-          </el-button>
+          <div class="footer-actions">
+            <el-button @click="resetConfig">重置</el-button>
+            <el-button type="primary" size="large" :loading="generating" :disabled="!canGenerate"
+              @click="handleGenerate">
+              <el-icon v-if="!generating"><MagicStick /></el-icon>
+              {{ generating ? 'AI 生成中...' : '开始生成' }}
+            </el-button>
+          </div>
+          <div class="footer-hint">生成后可在顶部「用例库」查看结果与评审</div>
           <div v-if="lastResult" class="result-summary">
             <div class="result-line">生成完成：{{ lastResult.total }} 条 · {{ lastResult.elapsed_seconds }}s</div>
-            <div class="result-tip">可切换顶部「用例库」标签查看生成结果</div>
           </div>
         </div>
       </div>
@@ -158,6 +154,7 @@ const modelConfigs = ref<AIModelConfig[]>([])
 const generating = ref(false)
 const lastResult = ref<any>(null)
 const reqPoints = ref<RequirementPoint[]>([])
+const advancedPanels = ref<string[]>([])
 
 const config = reactive({
   requirement_id: undefined as number | undefined,
@@ -250,6 +247,14 @@ function resetConfig() {
   })
   reqPoints.value = []
   lastResult.value = null
+}
+
+function setBasicScenarios() {
+  config.cover_scenarios = ['normal', 'exception', 'boundary']
+}
+
+function setAllScenarios() {
+  config.cover_scenarios = ['normal', 'exception', 'boundary', 'permission', 'compatibility', 'security']
 }
 
 async function handleGenerate() {
@@ -352,15 +357,6 @@ function providerName(p: string): string {
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 .header-actions { display: flex; gap: 8px; }
-.quick-bar { margin-bottom: 12px; padding: 10px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
-.quick-pill {
-  border: 1px solid #e5e7eb;
-  background: #f8fafc;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 12px;
-  color: #4b5563;
-}
 
 .generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
 .config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
@@ -378,6 +374,18 @@ function providerName(p: string): string {
   margin: 16px 0 8px;
   display: flex; align-items: center; gap: 8px;
 }
+.section-label.small { margin-top: 12px; }
+.sec-index {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  background: #4f6ef7;
+}
 .temp-val { color: #4f6ef7; font-weight: 700; }
 
 .type-group { width: 100%; display: flex; }
@@ -385,14 +393,17 @@ function providerName(p: string): string {
 .type-group :deep(.el-radio-button__inner) { width: 100%; }
 
 .scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.scenario-shortcuts { display: flex; gap: 8px; margin-bottom: 8px; }
 
 .req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
 .summary-title { margin-top: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.module-filter-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.advanced-collapse { margin-top: 14px; }
 
 .result-summary { margin-top: 10px; border: 1px solid #dbeafe; background: #f8fbff; border-radius: 8px; padding: 8px 10px; }
 .result-line { font-size: 13px; font-weight: 600; color: #1f2937; }
-.result-tip { font-size: 12px; color: #6b7280; }
+.footer-actions { display: flex; gap: 8px; }
+.footer-actions .el-button { flex: 1; }
+.footer-hint { margin-top: 8px; font-size: 12px; color: #6b7280; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
@@ -413,6 +424,6 @@ function providerName(p: string): string {
 }
 @media (max-width: 768px) {
   .page-header { flex-direction: column; align-items: flex-start; }
-  .quick-bar { gap: 6px; }
+  .scenario-group { grid-template-columns: 1fr; }
 }
 </style>

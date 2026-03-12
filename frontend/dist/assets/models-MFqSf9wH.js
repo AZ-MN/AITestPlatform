@@ -1,0 +1,1 @@
+import{aq as t}from"./index-D6jmwhjw.js";const d={providers:()=>t.get("/models/providers"),list:()=>t.get("/models"),add:e=>t.post("/models",e),update:(e,o)=>t.put(`/models/${e}`,o),remove:e=>t.delete(`/models/${e}`),test:e=>t.post(`/models/${e}/test`)};export{d as m};
