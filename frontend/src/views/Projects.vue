@@ -6,12 +6,39 @@
     </div>
 
     <div class="project-grid">
-      <div v-for="p in projectStore.projects" :key="p.id" class="project-card">
+      <div
+        v-for="p in projectStore.projects"
+        :key="p.id"
+        class="project-card"
+        tabindex="0"
+        @click="openProject(p)"
+        @keydown.enter.prevent="openProject(p)"
+        @keydown.space.prevent="openProject(p)"
+      >
         <div class="card-top">
           <span class="p-icon">{{ p.icon }}</span>
-          <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small">
-            {{ p.status === 'active' ? '进行中' : '已归档' }}
-          </el-tag>
+          <div class="top-right">
+            <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small">
+              {{ p.status === 'active' ? '进行中' : '已归档' }}
+            </el-tag>
+            <div class="card-icons" @click.stop>
+              <el-tooltip content="编辑项目" placement="top">
+                <el-button text circle @click.stop="editProject(p)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip :content="p.status === 'archived' ? '取消归档' : '归档项目'" placement="top">
+                <el-button text circle type="warning" @click.stop="p.status === 'archived' ? unarchiveProject(p) : archiveProject(p)">
+                  <el-icon><RefreshLeft v-if="p.status === 'archived'" /><FolderRemove v-else /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="删除项目" placement="top">
+                <el-button text circle type="danger" :disabled="p.status === 'archived'" @click.stop="deleteProject(p)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </el-tooltip>
+            </div>
+          </div>
         </div>
         <div class="p-name">{{ p.name }}</div>
         <div class="p-desc">{{ p.description || '暂无描述' }}</div>
@@ -20,22 +47,7 @@
           <span>📄 {{ p.req_count }} 需求</span>
           <span>👥 {{ p.member_count }} 成员</span>
         </div>
-        <div class="card-actions">
-          <el-button class="btn-enter" type="primary" @click="openProject(p)">进入项目</el-button>
-          <div class="action-links">
-            <el-button link @click="editProject(p)">编辑</el-button>
-            <el-button
-              v-if="p.status === 'archived'"
-              link
-              type="warning"
-              @click="unarchiveProject(p)"
-            >
-              取消归档
-            </el-button>
-            <el-button v-else link type="warning" @click="archiveProject(p)">归档</el-button>
-            <el-button link type="danger" :disabled="p.status === 'archived'" @click="deleteProject(p)">删除</el-button>
-          </div>
-        </div>
+        <div class="card-hint">点击卡片进入项目</div>
       </div>
 
       <div class="add-card" @click="showCreate = true">
@@ -72,7 +84,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, FolderRemove, RefreshLeft } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '@/stores/project'
 import { projectApi } from '@/api/projects'
@@ -198,28 +210,19 @@ async function deleteProject(p: Project) {
   border-radius: 12px;
   padding: 20px;
   transition: all .2s;
+  cursor: pointer;
 }
-.project-card:hover { border-color: #4f6ef7; box-shadow: 0 4px 16px rgba(79,110,247,.1); }
+.project-card:hover { border-color: #4f6ef7; box-shadow: 0 4px 16px rgba(79,110,247,.1); transform: translateY(-1px); }
+.project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.card-icons { display: flex; align-items: center; }
 .p-icon { font-size: 32px; }
 .p-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
 .p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 36px; }
-.p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
-.card-actions { display: flex; flex-direction: column; gap: 8px; }
-.btn-enter {
-  width: 100%;
-  height: 34px;
-  border-radius: 8px;
-  font-weight: 600;
-}
-.action-links {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-:deep(.action-links .el-button + .el-button) { margin-left: 0; }
-:deep(.action-links .el-button) { padding: 0; font-size: 13px; }
+.p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+.card-hint { font-size: 12px; color: #9ca3af; }
+:deep(.card-icons .el-button + .el-button) { margin-left: 0; }
 
 .add-card {
   background: #fff;
@@ -253,6 +256,6 @@ async function deleteProject(p: Project) {
 .icon-opt:hover { border-color: #4f6ef7; }
 
 @media (max-width: 768px) {
-  .action-links { justify-content: flex-start; flex-wrap: wrap; }
+  .top-right { gap: 4px; }
 }
 </style>
