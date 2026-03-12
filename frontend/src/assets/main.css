@@ -4,6 +4,8 @@
 :root {
   --primary: #4f6ef7;
   --primary-light: #eef0fe;
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --sidebar-width: 220px;
   --header-height: 56px;
   --bg: #f5f7fa;
@@ -29,10 +31,39 @@ html, body, #app {
 /* 卡片 */
 .page-card {
   background: var(--card-bg);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  padding: 20px 24px;
+  padding: 16px;
 }
+
+/* 页面标题区统一 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.page-header h2 { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; line-height: 1.4; }
+
+/* 组件风格统一 */
+.el-button {
+  border-radius: var(--radius-sm) !important;
+  height: 34px;
+  padding: 0 14px;
+  font-weight: 500;
+}
+.el-button.el-button--small {
+  height: 30px;
+  padding: 0 10px;
+}
+.el-button.el-button--large {
+  height: 38px;
+  padding: 0 16px;
+}
+.el-tag { border-radius: 999px; }
+.el-input__wrapper, .el-select__wrapper, .el-textarea__inner { border-radius: var(--radius-sm) !important; }
 
 /* 优先级标签 */
 .tag-p0 { background: #fff0f0; color: #e03030; border-color: #ffcdcd; }
