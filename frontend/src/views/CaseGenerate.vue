@@ -96,14 +96,44 @@
         </div>
       </div>
 
-      <el-dialog v-model="advancedDialogVisible" title="高级参数配置" width="520px" class="advanced-dialog">
+      <el-dialog v-model="advancedDialogVisible" title="高级参数配置" width="620px" class="advanced-dialog" :close-on-click-modal="false">
         <div class="advanced-dialog-body">
+          <div class="advanced-summary">
+            <div>
+              <div class="advanced-title">生成风格微调</div>
+              <div class="advanced-sub">选择预设风格或手动拖动滑杆，立即应用到本次生成。</div>
+            </div>
+            <el-tag type="primary" effect="light">{{ temperatureLabel }}</el-tag>
+          </div>
+          <div class="preset-grid">
+            <button type="button" class="preset-card" :class="{ active: config.temperature === 0.2 }" @click="applyTemperature(0.2)">
+              <span class="preset-name">稳健</span>
+              <span class="preset-desc">结构清晰、保守严谨</span>
+            </button>
+            <button type="button" class="preset-card" :class="{ active: config.temperature === 0.5 }" @click="applyTemperature(0.5)">
+              <span class="preset-name">均衡</span>
+              <span class="preset-desc">覆盖与创造性平衡</span>
+            </button>
+            <button type="button" class="preset-card" :class="{ active: config.temperature === 0.8 }" @click="applyTemperature(0.8)">
+              <span class="preset-name">探索</span>
+              <span class="preset-desc">更多发散场景探索</span>
+            </button>
+          </div>
           <div class="advanced-item">
-            <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
+            <div class="temp-row">
+              <span>创造性（Temperature）</span>
+              <span class="temp-val">{{ config.temperature.toFixed(1) }}</span>
+            </div>
             <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
-            <div class="advanced-tip">值越低越稳健，值越高越发散。</div>
+            <div class="advanced-tip">低温度更稳定，高温度更发散；建议先用预设再微调。</div>
           </div>
         </div>
+        <template #footer>
+          <div class="advanced-footer">
+            <el-button @click="resetAdvanced">恢复默认</el-button>
+            <el-button type="primary" @click="advancedDialogVisible = false">完成</el-button>
+          </div>
+        </template>
       </el-dialog>
       </div>
 
@@ -213,6 +243,11 @@ const mindmapData = computed(() => {
 
 const tempMarks = { 0: '严谨', 0.5: '均衡', 1: '发散' }
 const selectedReqTitle = computed(() => requirements.value.find(r => r.id === config.requirement_id)?.title || '')
+const temperatureLabel = computed(() => {
+  if (config.temperature <= 0.3) return '稳健生成'
+  if (config.temperature <= 0.6) return '均衡生成'
+  return '探索生成'
+})
 
 onMounted(async () => {
   requirements.value = await requirementApi.list(projectId.value)
@@ -251,6 +286,14 @@ function resetConfig() {
   })
   reqPoints.value = []
   lastResult.value = null
+}
+
+function applyTemperature(value: number) {
+  config.temperature = value
+}
+
+function resetAdvanced() {
+  config.temperature = 0.3
 }
 
 async function handleGenerate() {
@@ -410,11 +453,23 @@ function providerName(p: string): string {
 .footer-actions .el-button { flex: 1; }
 .footer-hint { margin-top: 8px; font-size: 12px; color: #6b7280; }
 .advanced-dialog-body { display: grid; gap: 14px; }
-.advanced-item { border: 1px solid #e6eaf5; border-radius: 10px; padding: 12px; background: #fafbff; }
-.advanced-item .section-label.small { margin: 0 0 10px; }
+.advanced-summary { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #f4f7ff 0%, #eef2ff 100%); }
+.advanced-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+.advanced-sub { margin-top: 4px; font-size: 12px; color: #64748b; line-height: 1.5; }
+.preset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.preset-card { border: 1px solid #dbe3ff; background: #fff; border-radius: 10px; padding: 10px; text-align: left; cursor: pointer; transition: all .2s ease; }
+.preset-card:hover { border-color: #9ab0ff; box-shadow: 0 4px 12px rgba(79, 110, 247, 0.12); }
+.preset-card.active { border-color: #4f6ef7; background: #f4f7ff; box-shadow: inset 0 0 0 1px #4f6ef7; }
+.preset-name { display: block; font-size: 13px; font-weight: 600; color: #111827; }
+.preset-desc { display: block; margin-top: 4px; font-size: 12px; color: #64748b; line-height: 1.4; }
+.advanced-item { border: 1px solid #e6eaf5; border-radius: 10px; padding: 14px; background: #fafbff; }
+.temp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: #4b5563; }
 .advanced-tip { margin-top: 8px; font-size: 12px; color: #64748b; }
-:deep(.advanced-dialog .el-dialog__header) { border-bottom: 1px solid #edf0f7; margin-right: 0; padding-bottom: 14px; }
-:deep(.advanced-dialog .el-dialog__body) { padding-top: 14px; }
+.advanced-footer { display: flex; justify-content: flex-end; gap: 8px; }
+:deep(.advanced-dialog .el-dialog) { border-radius: 12px; overflow: hidden; }
+:deep(.advanced-dialog .el-dialog__header) { border-bottom: 1px solid #edf0f7; margin-right: 0; padding: 16px 20px 14px; }
+:deep(.advanced-dialog .el-dialog__body) { padding: 14px 20px 8px; }
+:deep(.advanced-dialog .el-dialog__footer) { border-top: 1px solid #edf0f7; padding: 12px 20px 14px; }
 
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
@@ -437,5 +492,6 @@ function providerName(p: string): string {
 @media (max-width: 768px) {
   .page-header { align-items: flex-start; }
   .scenario-group { grid-template-columns: 1fr; }
+  .preset-grid { grid-template-columns: 1fr; }
 }
 </style>
