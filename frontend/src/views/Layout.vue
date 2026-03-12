@@ -26,25 +26,6 @@
           <template #title>项目管理</template>
         </el-menu-item>
 
-        <el-sub-menu v-if="projectStore.current" index="project">
-          <template #title>
-            <el-icon><Files /></el-icon>
-            <span>{{ projectStore.current.icon }} {{ projectStore.current.name }}</span>
-          </template>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/requirements`">
-            <el-icon><Document /></el-icon>
-            <template #title>需求管理</template>
-          </el-menu-item>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/generate`">
-            <el-icon><MagicStick /></el-icon>
-            <template #title>智能生成</template>
-          </el-menu-item>
-          <el-menu-item :index="`/projects/${projectStore.current.id}/cases`">
-            <el-icon><List /></el-icon>
-            <template #title>用例库</template>
-          </el-menu-item>
-        </el-sub-menu>
-
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
           <template #title>模型设置</template>
@@ -111,7 +92,10 @@ const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
 
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => {
+  if (route.path.startsWith('/projects/')) return '/projects'
+  return route.path
+})
 
 const breadcrumbs = computed(() => {
   const crumbs = [{ path: '/dashboard', title: '首页' }]

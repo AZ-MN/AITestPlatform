@@ -7,6 +7,7 @@ export const projectApi = {
   create: (data: { name: string; description?: string; icon?: string }) =>
     http.post<any, Project>('/projects', data),
   update: (id: number, data: any) => http.put<any, Project>(`/projects/${id}`, data),
+  purge: (id: number) => http.post(`/projects/${id}/purge`),
   remove: (id: number) => http.delete(`/projects/${id}`),
   setStatus: (id: number, status: 'active' | 'archived') =>
     http.put<any, Project>(`/projects/${id}`, { status }),

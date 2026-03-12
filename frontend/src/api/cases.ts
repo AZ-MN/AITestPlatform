@@ -9,6 +9,9 @@ export const caseApi = {
   create: (data: any) => http.post<any, TestCase>('/cases', data),
 
   update: (id: number, data: any) => http.put<any, TestCase>(`/cases/${id}`, data),
+  setStatus: (id: number, status: string) => http.patch<any, TestCase>(`/cases/${id}/status`, { status }),
+  batchSetStatus: (ids: number[], status: string) =>
+    http.patch('/cases/status/batch', { case_ids: ids, status }),
 
   remove: (id: number) => http.delete(`/cases/${id}`),
 

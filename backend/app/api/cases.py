@@ -67,6 +67,13 @@ def _build_fallback_cases(req_points: List[dict], test_type: str, cover_scenario
     return cases
 
 
+def _validate_case_status(status: str) -> str:
+    allowed = {"draft", "pending_review", "reviewed", "deprecated"}
+    if status not in allowed:
+        raise HTTPException(status_code=400, detail=f"不支持的状态：{status}")
+    return status
+
+
 # ── 列表与查询 ─────────────────────────────────────────────────
 
 @router.get("", summary="获取用例列表")
@@ -249,6 +256,22 @@ async def case_stats(
 
 # ── 单条 CRUD ─────────────────────────────────────────────────
 
+@router.patch("/status/batch", summary="批量更新用例状态")
+async def batch_update_case_status(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    case_ids = payload.get("case_ids") or []
+    status = _validate_case_status(payload.get("status", ""))
+    if not isinstance(case_ids, list) or not case_ids:
+        raise HTTPException(status_code=400, detail="case_ids 不能为空")
+    db.query(TestCase).filter(TestCase.id.in_(case_ids)).update(
+        {"status": status}, synchronize_session=False
+    )
+    db.commit()
+    return {"message": f"已更新 {len(case_ids)} 条用例状态", "status": status}
+
 @router.get("/{case_id}", summary="获取用例详情")
 async def get_case(
     case_id: int,
@@ -293,6 +316,22 @@ async def update_case(
         raise HTTPException(status_code=404, detail="用例不存在")
     for field, value in case_in.model_dump(exclude_unset=True).items():
         setattr(case, field, value)
+    db.commit()
+    db.refresh(case)
+    return _case_to_dict(case, db)
+
+
+@router.patch("/{case_id}/status", summary="更新用例状态")
+async def update_case_status(
+    case_id: int,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    case = db.query(TestCase).filter(TestCase.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="用例不存在")
+    case.status = _validate_case_status(payload.get("status", ""))
     db.commit()
     db.refresh(case)
     return _case_to_dict(case, db)

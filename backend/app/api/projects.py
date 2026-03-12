@@ -21,6 +21,14 @@ def _enrich_project(p: Project, db: Session) -> dict:
     return d
 
 
+def _hard_delete_project(project_id: int, db: Session):
+    db.query(TestCase).filter(TestCase.project_id == project_id).delete(synchronize_session=False)
+    db.query(Requirement).filter(Requirement.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
+    db.query(Project).filter(Project.id == project_id).delete(synchronize_session=False)
+    db.commit()
+
+
 @router.get("", summary="获取项目列表")
 async def list_projects(
     current_user: User = Depends(get_current_user),
@@ -100,13 +108,25 @@ async def delete_project(
     if proj.status == "archived":
         raise HTTPException(status_code=400, detail="已归档项目不可删除，请先取消归档")
 
-    # 先清理关联数据，避免外键约束导致删除失败
-    db.query(TestCase).filter(TestCase.project_id == project_id).delete(synchronize_session=False)
-    db.query(Requirement).filter(Requirement.project_id == project_id).delete(synchronize_session=False)
-    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
-    db.delete(proj)
-    db.commit()
+    _hard_delete_project(project_id, db)
     return {"message": "项目已删除"}
+
+
+@router.post("/{project_id}/purge", summary="永久删除项目")
+async def purge_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if current_user.role != "super_admin" and proj.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="仅项目创建者或系统管理员可删除项目")
+    if proj.status == "archived":
+        raise HTTPException(status_code=400, detail="已归档项目不可删除，请先取消归档")
+    _hard_delete_project(project_id, db)
+    return {"message": "项目已永久删除"}
 
 
 @router.patch("/{project_id}/archive", summary="归档项目")

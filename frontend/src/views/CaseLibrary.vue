@@ -28,12 +28,16 @@
         <el-option label="草稿" value="draft" />
         <el-option label="待评审" value="pending_review" />
         <el-option label="已评审" value="reviewed" />
+        <el-option label="已作废" value="deprecated" />
       </el-select>
       <el-button @click="resetFilters">重置</el-button>
       <div class="filter-stats">
         共 <strong>{{ total }}</strong> 条
         <template v-if="selectedIds.length">
           ，已选 <strong>{{ selectedIds.length }}</strong> 条
+          <el-button size="small" type="warning" link @click="batchSubmitReview">批量提审</el-button>
+          <el-button size="small" type="success" link @click="batchApprove">批量通过</el-button>
+          <el-button size="small" type="info" link @click="batchResetDraft">重置草稿</el-button>
           <el-button size="small" type="danger" link @click="batchDelete">批量删除</el-button>
         </template>
       </div>
@@ -82,6 +86,33 @@
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="viewCase(row)">查看</el-button>
             <el-button link type="success" size="small" @click="editCase(row)">编辑</el-button>
+            <el-button
+              v-if="row.status === 'draft'"
+              link
+              type="warning"
+              size="small"
+              @click="submitReview(row)"
+            >
+              提审
+            </el-button>
+            <el-button
+              v-else-if="row.status === 'pending_review'"
+              link
+              type="success"
+              size="small"
+              @click="approveCase(row)"
+            >
+              通过
+            </el-button>
+            <el-button
+              v-if="row.status === 'pending_review'"
+              link
+              type="info"
+              size="small"
+              @click="rejectCase(row)"
+            >
+              驳回
+            </el-button>
             <el-button link type="danger" size="small" @click="deleteCase(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -232,12 +263,83 @@ async function deleteCase(c: TestCase) {
   fetchCases()
 }
 
+async function updateStatus(c: TestCase, status: 'draft' | 'pending_review' | 'reviewed' | 'deprecated', msg: string) {
+  try {
+    await caseApi.setStatus(c.id, status)
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await caseApi.update(c.id, { status })
+    } else {
+      throw e
+    }
+  }
+  ElMessage.success(msg)
+  await fetchCases()
+}
+
+async function submitReview(c: TestCase) {
+  await updateStatus(c, 'pending_review', '已提交评审')
+}
+
+async function approveCase(c: TestCase) {
+  await updateStatus(c, 'reviewed', '评审通过')
+}
+
+async function rejectCase(c: TestCase) {
+  await updateStatus(c, 'draft', '已驳回并退回草稿')
+}
+
 async function batchDelete() {
   await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条用例？`, '批量删除', { type: 'warning' })
   await caseApi.batchDelete(selectedIds.value)
   ElMessage.success('批量删除成功')
   selectedIds.value = []
   fetchCases()
+}
+
+async function batchSubmitReview() {
+  try {
+    await caseApi.batchSetStatus(selectedIds.value, 'pending_review')
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await Promise.all(selectedIds.value.map(id => caseApi.update(id, { status: 'pending_review' })))
+    } else {
+      throw e
+    }
+  }
+  ElMessage.success('已批量提交评审')
+  selectedIds.value = []
+  await fetchCases()
+}
+
+async function batchApprove() {
+  try {
+    await caseApi.batchSetStatus(selectedIds.value, 'reviewed')
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await Promise.all(selectedIds.value.map(id => caseApi.update(id, { status: 'reviewed' })))
+    } else {
+      throw e
+    }
+  }
+  ElMessage.success('已批量评审通过')
+  selectedIds.value = []
+  await fetchCases()
+}
+
+async function batchResetDraft() {
+  try {
+    await caseApi.batchSetStatus(selectedIds.value, 'draft')
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await Promise.all(selectedIds.value.map(id => caseApi.update(id, { status: 'draft' })))
+    } else {
+      throw e
+    }
+  }
+  ElMessage.success('已批量重置为草稿')
+  selectedIds.value = []
+  await fetchCases()
 }
 
 async function submitRating() {
@@ -273,8 +375,10 @@ const stageLabel = (s: string) =>
   ({ smoke: '冒烟', integration: '集成', system: '系统', regression: '回归' })[s] || s
 const statusLabel = (s: string) =>
   ({ draft: '草稿', pending_review: '待评审', reviewed: '已评审', deprecated: '已作废' })[s] || s
-const statusType = (s: string): string =>
-  ({ draft: 'info', pending_review: 'warning', reviewed: 'success', deprecated: 'danger' })[s] || 'info'
+const statusType = (s: string): 'success' | 'primary' | 'warning' | 'info' | 'danger' =>
+  (({ draft: 'info', pending_review: 'warning', reviewed: 'success', deprecated: 'danger' } as const)[
+    s as 'draft' | 'pending_review' | 'reviewed' | 'deprecated'
+  ] || 'info')
 </script>
 
 <style scoped>

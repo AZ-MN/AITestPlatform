@@ -21,19 +21,20 @@
           <span>👥 {{ p.member_count }} 成员</span>
         </div>
         <div class="card-actions">
-          <el-button size="small" type="primary" @click="openProject(p)">进入项目</el-button>
-          <el-button size="small" @click="editProject(p)">编辑</el-button>
-          <el-button
-            v-if="p.status === 'archived'"
-            size="small"
-            type="warning"
-            plain
-            @click="unarchiveProject(p)"
-          >
-            取消归档
-          </el-button>
-          <el-button v-else size="small" type="danger" plain @click="archiveProject(p)">归档</el-button>
-          <el-button size="small" type="danger" :disabled="p.status === 'archived'" @click="deleteProject(p)">删除</el-button>
+          <el-button class="btn-enter" type="primary" @click="openProject(p)">进入项目</el-button>
+          <div class="action-links">
+            <el-button link @click="editProject(p)">编辑</el-button>
+            <el-button
+              v-if="p.status === 'archived'"
+              link
+              type="warning"
+              @click="unarchiveProject(p)"
+            >
+              取消归档
+            </el-button>
+            <el-button v-else link type="warning" @click="archiveProject(p)">归档</el-button>
+            <el-button link type="danger" :disabled="p.status === 'archived'" @click="deleteProject(p)">删除</el-button>
+          </div>
         </div>
       </div>
 
@@ -164,7 +165,21 @@ async function deleteProject(p: Project) {
     '删除确认',
     { type: 'error', confirmButtonText: '确认删除', cancelButtonText: '取消' }
   )
-  await projectApi.remove(p.id)
+  try {
+    await projectApi.purge(p.id)
+  } catch (e: any) {
+    if (e?.response?.status === 404) {
+      await projectApi.remove(p.id)
+    } else {
+      throw e
+    }
+  }
+  const latest = await projectApi.list()
+  if (latest.some(item => item.id === p.id)) {
+    ElMessage.error('删除未生效，请稍后重试（建议重启后端）')
+    await projectStore.fetchProjects()
+    return
+  }
   if (projectStore.current?.id === p.id) projectStore.current = null
   ElMessage.success('项目已删除')
   await projectStore.fetchProjects()
@@ -190,9 +205,21 @@ async function deleteProject(p: Project) {
 .p-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
 .p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 36px; }
 .p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
-.card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-:deep(.card-actions .el-button + .el-button) { margin-left: 0; }
-:deep(.card-actions .el-button) { flex: 1 1 calc(50% - 4px); min-width: 0; }
+.card-actions { display: flex; flex-direction: column; gap: 8px; }
+.btn-enter {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.action-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+:deep(.action-links .el-button + .el-button) { margin-left: 0; }
+:deep(.action-links .el-button) { padding: 0; font-size: 13px; }
 
 .add-card {
   background: #fff;
@@ -226,6 +253,6 @@ async function deleteProject(p: Project) {
 .icon-opt:hover { border-color: #4f6ef7; }
 
 @media (max-width: 768px) {
-  :deep(.card-actions .el-button) { flex-basis: 100%; }
+  .action-links { justify-content: flex-start; flex-wrap: wrap; }
 }
 </style>
