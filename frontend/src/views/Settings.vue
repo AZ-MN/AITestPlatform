@@ -21,7 +21,9 @@
             {{ providerIcon(cfg.provider) }}
           </div>
           <div class="model-main">
-            <div class="model-name">{{ cfg.model_name }}</div>
+            <el-tooltip :content="cfg.model_name" placement="top">
+              <div class="model-name">{{ cfg.model_name }}</div>
+            </el-tooltip>
             <div class="provider-name">{{ providerLabel(cfg.provider) }}</div>
           </div>
           <div class="model-header-right" @click.stop>
@@ -81,27 +83,27 @@
     <!-- 添加/编辑弹窗 -->
     <el-dialog v-model="showDialog" :title="editId ? '编辑模型配置' : '添加模型配置'" width="520px" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" label-width="110px">
-        <el-form-item label="供应商" prop="provider" :rules="[{ required: true }]">
+        <el-form-item label="供应商" prop="provider" :rules="[{ required: true, message: '请选择供应商', trigger: 'change' }]">
           <el-select v-model="form.provider" placeholder="选择供应商" style="width:100%" @change="onProviderChange">
             <el-option v-for="p in providers" :key="p.id" :value="p.id" :label="p.name" />
           </el-select>
         </el-form-item>
-        <el-form-item label="模型" prop="model_name" :rules="[{ required: true }]">
+        <el-form-item label="模型" prop="model_name" :rules="[{ required: true, message: '请选择或输入模型名称', trigger: 'change' }]">
           <el-select v-model="form.model_name" placeholder="选择模型" style="width:100%" allow-create filterable>
             <el-option v-for="m in currentModels" :key="m" :value="m" :label="m" />
           </el-select>
         </el-form-item>
-        <el-form-item label="API Key">
-          <el-input v-model="form.api_key" type="password" show-password placeholder="sk-..." />
+        <el-form-item label="API 密钥">
+          <el-input v-model="form.api_key" type="password" show-password placeholder="请输入模型密钥（可选）" />
         </el-form-item>
-        <el-form-item label="API Base URL">
-          <el-input v-model="form.api_base_url" placeholder="（可选，使用默认地址则留空）" />
+        <el-form-item label="接口地址">
+          <el-input v-model="form.api_base_url" placeholder="可选，留空则使用默认地址" />
         </el-form-item>
-        <el-form-item label="Temperature">
+        <el-form-item label="温度参数">
           <el-input-number v-model.number="form.temperature_num" :min="0" :max="1" :step="0.1" :precision="1" />
           <span style="margin-left:8px;color:#9ca3af;font-size:12px">越低越严谨，越高越发散</span>
         </el-form-item>
-        <el-form-item label="最大 Token">
+        <el-form-item label="最大令牌数">
           <el-input-number v-model="form.max_tokens" :min="512" :max="128000" :step="512" />
         </el-form-item>
         <el-form-item label="设为默认">
@@ -236,32 +238,45 @@ async function removeConfig(cfg: AIModelConfig) {
   align-items: start;
   gap: 18px;
 }
-.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 184px; border-radius: 14px; }
+.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 184px; border-radius: 14px; position: relative; overflow: hidden; }
+.model-card { background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%); border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
+.model-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f6ef7 0%, #7c92ff 100%);
+  opacity: .55;
+}
 .model-card-header { display: flex; align-items: center; gap: 10px; }
 .provider-badge {
   width: 40px; height: 40px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; flex-shrink: 0;
 }
-.model-main { min-width: 0; flex: 1; }
-.model-name { font-size: 14px; font-weight: 600; }
+.model-main { min-width: 0; flex: 1; padding-right: 8px; }
+.model-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
 .provider-name { font-size: 12px; color: var(--text-secondary); }
-.model-header-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.model-header-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .model-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .meta-item { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
 .meta-item span { font-size: 11px; color: #6b7280; }
 .meta-item strong { font-size: 13px; color: #111827; font-weight: 600; }
-.model-actions { display: flex; gap: 2px; }
+.model-actions { display: flex; flex-direction: column; gap: 2px; }
 .model-actions :deep(.el-button) { width: 28px; height: 28px; }
+.model-actions :deep(.el-button:hover) { background: #eef2ff; color: #4f6ef7; }
 .test-result { font-size: 12px; padding: 6px 8px; border-radius: 6px; }
 .test-result.ok { background: #ecfdf5; color: #059669; }
 .test-result.fail { background: #fef2f2; color: #dc2626; }
 
 .add-model-card {
-  border: 2px dashed var(--border); border-radius: 12px; padding: 14px;
+  border: 2px dashed var(--border); border-radius: 14px; padding: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 8px; cursor: pointer; color: #9ca3af; min-height: 184px;
   transition: all .2s; font-size: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
 }
 .add-model-card:hover { border-color: #4f6ef7; color: #4f6ef7; }
 
