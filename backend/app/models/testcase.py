@@ -47,6 +47,23 @@ class TestCase(Base):
     creator = relationship("User", back_populates="test_cases", foreign_keys=[created_by])
 
 
+class CaseReviewLog(Base):
+    __tablename__ = "case_review_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("test_cases.id"), nullable=False)
+    action = Column(String(30), nullable=False)        # update/status_change/rating/comment
+    from_status = Column(String(20))
+    to_status = Column(String(20))
+    comment = Column(Text)
+    detail = Column(JSON)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    case = relationship("TestCase")
+    creator = relationship("User", foreign_keys=[created_by])
+
+
 class AIModelConfig(Base):
     __tablename__ = "ai_model_configs"
 

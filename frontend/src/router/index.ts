@@ -23,11 +23,12 @@ const router = createRouter({
           component: () => import('@/views/ProjectDetail.vue'),
           children: [
             { path: '',           redirect: 'requirements' },
-            { path: 'requirements', name: 'Requirements', component: () => import('@/views/Requirements.vue') },
-            { path: 'generate',    name: 'Generate',      component: () => import('@/views/CaseGenerate.vue') },
-            { path: 'cases',       name: 'CaseLibrary',   component: () => import('@/views/CaseLibrary.vue') },
-          ]
-        },
+              { path: 'requirements', name: 'Requirements', component: () => import('@/views/Requirements.vue') },
+              { path: 'generate',    name: 'Generate',      component: () => import('@/views/CaseGenerate.vue') },
+              { path: 'cases',       name: 'CaseLibrary',   component: () => import('@/views/CaseLibrary.vue') },
+              { path: 'members',     name: 'ProjectMembers', component: () => import('@/views/ProjectMembers.vue') },
+            ]
+          },
         { path: 'settings',  name: 'Settings',     component: () => import('@/views/Settings.vue') },
         { path: 'profile',   name: 'Profile',      component: () => import('@/views/Profile.vue') },
       ]

@@ -24,6 +24,15 @@ export interface Project {
   req_count?: number
 }
 
+export interface ProjectMember {
+  id: number
+  user_id: number
+  username: string
+  full_name: string
+  role: string
+  joined_at: string
+}
+
 export interface RequirementPoint {
   id: string
   title: string
@@ -78,6 +87,19 @@ export interface TestCase {
   created_at: string
   updated_at: string
   creator_name?: string
+}
+
+export interface CaseReviewLog {
+  id: number
+  case_id: number
+  action: string
+  from_status?: string
+  to_status?: string
+  comment?: string
+  detail?: any
+  created_by: number
+  created_by_name?: string
+  created_at: string
 }
 
 export interface AIModelConfig {

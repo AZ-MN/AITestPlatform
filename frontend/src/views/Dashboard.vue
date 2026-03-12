@@ -45,6 +45,37 @@
         </div>
       </div>
     </div>
+
+    <div class="section quick-start">
+      <div class="section-header">
+        <h3>快速开始</h3>
+      </div>
+      <el-alert
+        v-if="modelCount === 0"
+        title="未配置 AI 模型，系统将自动使用规则引擎兜底生成"
+        type="warning"
+        show-icon
+        :closable="false"
+      />
+      <div v-else class="model-tip">默认模型：{{ defaultModelName }}</div>
+      <div class="quick-grid">
+        <div class="quick-item" @click="$router.push('/projects')">
+          <div class="q-title">1. 创建或进入项目</div>
+          <div class="q-desc">先准备项目空间和成员，统一需求与用例资产。</div>
+          <el-button type="primary" link>打开项目管理</el-button>
+        </div>
+        <div class="quick-item" @click="goRequirements">
+          <div class="q-title">2. 上传或录入需求</div>
+          <div class="q-desc">支持文档上传与手动输入，自动解析需求点。</div>
+          <el-button type="primary" link>进入需求管理</el-button>
+        </div>
+        <div class="quick-item" @click="goGenerate">
+          <div class="q-title">3. 一键生成测试用例</div>
+          <div class="q-desc">按测试类型与场景生成草稿，并可直接发起评审。</div>
+          <el-button type="primary" link>进入智能生成</el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -53,6 +84,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
+import { modelApi } from '@/api/models'
 import type { Project } from '@/api/types'
 
 const auth = useAuthStore()
@@ -61,9 +93,11 @@ const router = useRouter()
 
 const totalCases = ref(0)
 const totalReqs = ref(0)
+const modelCount = ref(0)
+const defaultModelName = ref('未设置')
 
 onMounted(async () => {
-  await projectStore.fetchProjects()
+  await Promise.all([projectStore.fetchProjects(), loadModels()])
   totalCases.value = projectStore.projects.reduce((s, p) => s + (p.case_count || 0), 0)
   totalReqs.value = projectStore.projects.reduce((s, p) => s + (p.req_count || 0), 0)
 })
@@ -83,10 +117,37 @@ function openProject(p: Project) {
   projectStore.setCurrent(p)
   router.push(`/projects/${p.id}/requirements`)
 }
+
+async function loadModels() {
+  try {
+    const models = await modelApi.list()
+    modelCount.value = models.length
+    if (models.length) {
+      const def = models.find(m => m.is_default) || models[0]
+      defaultModelName.value = `${providerName(def.provider)} · ${def.model_name}`
+    }
+  } catch {
+    modelCount.value = 0
+  }
+}
+
+function goRequirements() {
+  const p = recentProjects.value[0]
+  router.push(p ? `/projects/${p.id}/requirements` : '/projects')
+}
+
+function goGenerate() {
+  const p = recentProjects.value[0]
+  router.push(p ? `/projects/${p.id}/generate` : '/projects')
+}
+
+function providerName(p: string) {
+  return ({ openai: 'OpenAI', anthropic: 'Claude', tongyi: '通义千问', zhipu: '智谱GLM', deepseek: 'DeepSeek' } as Record<string, string>)[p] || p
+}
 </script>
 
 <style scoped>
-.dashboard { max-width: 1200px; }
+.dashboard { width: 100%; max-width: none; }
 .page-title { margin-bottom: 24px; }
 .page-title h2 { font-size: 22px; font-weight: 700; }
 .subtitle { color: var(--text-secondary); font-size: 14px; }
@@ -136,9 +197,17 @@ function openProject(p: Project) {
   font-size: 13px;
 }
 .new-project:hover { color: #4f6ef7; border-color: #4f6ef7; }
+.quick-start { margin-top: 16px; }
+.model-tip { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+.quick-item { border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; }
+.quick-item:hover { border-color: #4f6ef7; background: #fafbff; }
+.q-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.q-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; min-height: 36px; }
 
 @media (max-width: 900px) {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }
   .project-grid { grid-template-columns: repeat(2, 1fr); }
+  .quick-grid { grid-template-columns: 1fr; }
 }
 </style>

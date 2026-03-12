@@ -8,7 +8,7 @@ from typing import List, Optional
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.models.testcase import TestCase
+from app.models.testcase import TestCase, CaseReviewLog
 from app.models.requirement import Requirement
 from app.schemas.testcase import (
     TestCaseCreate, TestCaseUpdate, TestCaseOut,
@@ -28,6 +28,43 @@ def _case_to_dict(case: TestCase, db: Session) -> dict:
     creator = db.query(User).filter(User.id == case.created_by).first()
     d["creator_name"] = creator.full_name if creator else ""
     return d
+
+
+def _review_to_dict(log: CaseReviewLog, db: Session) -> dict:
+    creator = db.query(User).filter(User.id == log.created_by).first()
+    return {
+        "id": log.id,
+        "case_id": log.case_id,
+        "action": log.action,
+        "from_status": log.from_status,
+        "to_status": log.to_status,
+        "comment": log.comment,
+        "detail": log.detail,
+        "created_by": log.created_by,
+        "created_by_name": creator.full_name if creator else "",
+        "created_at": log.created_at,
+    }
+
+
+def _log_case_action(
+    db: Session,
+    case_id: int,
+    user_id: int,
+    action: str,
+    from_status: Optional[str] = None,
+    to_status: Optional[str] = None,
+    comment: Optional[str] = None,
+    detail: Optional[dict] = None,
+):
+    db.add(CaseReviewLog(
+        case_id=case_id,
+        action=action,
+        from_status=from_status,
+        to_status=to_status,
+        comment=comment,
+        detail=detail or {},
+        created_by=user_id,
+    ))
 
 
 def _build_fallback_cases(req_points: List[dict], test_type: str, cover_scenarios: List[str], granularity: str) -> List[dict]:
@@ -254,6 +291,32 @@ async def case_stats(
     }
 
 
+@router.get("/regression/minimal", summary="生成最小回归用例集")
+async def minimal_regression_cases(
+    project_id: int,
+    changed_modules: Optional[str] = None,
+    limit: int = Query(30, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    q = db.query(TestCase).filter(TestCase.project_id == project_id)
+    q = q.filter(TestCase.status.in_(["reviewed", "pending_review", "draft"]))
+    module_list = [m.strip() for m in (changed_modules or "").split(",") if m.strip()]
+    if module_list:
+        from sqlalchemy import or_
+        q = q.filter(or_(*[TestCase.module.contains(m) for m in module_list]))
+
+    cases = q.order_by(TestCase.updated_at.desc()).limit(500).all()
+
+    def _score(c: TestCase):
+        level_weight = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}.get(c.case_level or "P3", 3)
+        status_weight = {"reviewed": 0, "pending_review": 1, "draft": 2}.get(c.status or "draft", 3)
+        return (level_weight, status_weight, -(c.id or 0))
+
+    picked = sorted(cases, key=_score)[:limit]
+    return {"total": len(picked), "items": [_case_to_dict(c, db) for c in picked]}
+
+
 # ── 单条 CRUD ─────────────────────────────────────────────────
 
 @router.patch("/status/batch", summary="批量更新用例状态")
@@ -266,9 +329,19 @@ async def batch_update_case_status(
     status = _validate_case_status(payload.get("status", ""))
     if not isinstance(case_ids, list) or not case_ids:
         raise HTTPException(status_code=400, detail="case_ids 不能为空")
-    db.query(TestCase).filter(TestCase.id.in_(case_ids)).update(
-        {"status": status}, synchronize_session=False
-    )
+    target_cases = db.query(TestCase).filter(TestCase.id.in_(case_ids)).all()
+    for c in target_cases:
+        old_status = c.status
+        c.status = status
+        _log_case_action(
+            db=db,
+            case_id=c.id,
+            user_id=current_user.id,
+            action="status_change",
+            from_status=old_status,
+            to_status=status,
+            comment=f"批量更新状态为 {status}",
+        )
     db.commit()
     return {"message": f"已更新 {len(case_ids)} 条用例状态", "status": status}
 
@@ -282,6 +355,19 @@ async def get_case(
     if not case:
         raise HTTPException(status_code=404, detail="用例不存在")
     return _case_to_dict(case, db)
+
+
+@router.get("/{case_id}/reviews", summary="获取用例评审记录")
+async def list_case_reviews(
+    case_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    case = db.query(TestCase).filter(TestCase.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="用例不存在")
+    logs = db.query(CaseReviewLog).filter(CaseReviewLog.case_id == case_id).order_by(CaseReviewLog.created_at.desc()).all()
+    return [_review_to_dict(log, db) for log in logs]
 
 
 @router.post("", summary="手动创建用例")
@@ -314,8 +400,20 @@ async def update_case(
     case = db.query(TestCase).filter(TestCase.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="用例不存在")
-    for field, value in case_in.model_dump(exclude_unset=True).items():
+    update_payload = case_in.model_dump(exclude_unset=True)
+    old_status = case.status
+    for field, value in update_payload.items():
         setattr(case, field, value)
+    _log_case_action(
+        db=db,
+        case_id=case.id,
+        user_id=current_user.id,
+        action="update",
+        from_status=old_status,
+        to_status=case.status,
+        comment="更新用例内容",
+        detail={"fields": list(update_payload.keys())},
+    )
     db.commit()
     db.refresh(case)
     return _case_to_dict(case, db)
@@ -331,7 +429,18 @@ async def update_case_status(
     case = db.query(TestCase).filter(TestCase.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="用例不存在")
-    case.status = _validate_case_status(payload.get("status", ""))
+    old_status = case.status
+    new_status = _validate_case_status(payload.get("status", ""))
+    case.status = new_status
+    _log_case_action(
+        db=db,
+        case_id=case.id,
+        user_id=current_user.id,
+        action="status_change",
+        from_status=old_status,
+        to_status=new_status,
+        comment=f"状态变更为 {new_status}",
+    )
     db.commit()
     db.refresh(case)
     return _case_to_dict(case, db)
@@ -374,6 +483,16 @@ async def rate_case(
         raise HTTPException(status_code=404, detail="用例不存在")
     case.rating = rating_in.rating
     case.feedback = rating_in.feedback
+    _log_case_action(
+        db=db,
+        case_id=case.id,
+        user_id=current_user.id,
+        action="rating",
+        from_status=case.status,
+        to_status=case.status,
+        comment=f"评分 {rating_in.rating} 星",
+        detail={"rating": rating_in.rating, "feedback": rating_in.feedback or ""},
+    )
     db.commit()
     return {"message": "评分提交成功"}
 

@@ -1,5 +1,5 @@
 import http from './http'
-import type { Project } from './types'
+import type { Project, ProjectMember } from './types'
 
 export const projectApi = {
   list: () => http.get<any, Project[]>('/projects'),
@@ -13,7 +13,8 @@ export const projectApi = {
     http.put<any, Project>(`/projects/${id}`, { status }),
   archive: (id: number) => http.patch(`/projects/${id}/archive`),
   unarchive: (id: number) => http.patch(`/projects/${id}/unarchive`),
-  members: (id: number) => http.get<any, any[]>(`/projects/${id}/members`),
+  members: (id: number) => http.get<any, ProjectMember[]>(`/projects/${id}/members`),
   addMember: (id: number, data: { user_id: number; role: string }) =>
     http.post(`/projects/${id}/members`, data),
+  removeMember: (id: number, memberId: number) => http.delete(`/projects/${id}/members/${memberId}`),
 }

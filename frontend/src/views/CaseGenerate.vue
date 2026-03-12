@@ -8,6 +8,14 @@
       <!-- 左：生成配置 -->
       <div class="config-panel page-card">
         <h3>生成配置</h3>
+        <el-alert
+          v-if="!modelConfigs.length"
+          title="当前未配置 AI 模型，将使用规则引擎生成可用用例"
+          type="warning"
+          show-icon
+          :closable="false"
+          style="margin-bottom:12px"
+        />
 
         <!-- 需求来源 -->
         <div class="section-label">需求来源</div>
@@ -95,7 +103,10 @@
           <span class="preview-count">{{ filteredPoints.length }} 个</span>
         </div>
         <div v-if="!filteredPoints.length" class="preview-empty">
-          <p>请先在左侧选择需求来源</p>
+          <p>{{ requirements.length ? '请先在左侧选择需求来源' : '当前项目还没有需求，先去需求管理录入内容' }}</p>
+          <el-button v-if="!requirements.length" type="primary" plain @click="router.push(`/projects/${projectId}/requirements`)">
+            去需求管理
+          </el-button>
         </div>
         <div v-else class="preview-list">
           <div v-for="(p, i) in filteredPoints" :key="i" class="req-point">
@@ -169,6 +180,9 @@ onMounted(async () => {
   if (reqId) {
     config.requirement_id = Number(reqId)
     await onReqChange(Number(reqId))
+  } else if (requirements.value.length === 1) {
+    config.requirement_id = requirements.value[0].id
+    await onReqChange(requirements.value[0].id)
   }
 })
 
@@ -273,7 +287,7 @@ function providerName(p: string): string {
 </script>
 
 <style scoped>
-.generate-page { max-width: 1300px; }
+.generate-page { width: 100%; max-width: none; }
 .page-header { margin-bottom: 20px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 

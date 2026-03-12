@@ -105,6 +105,7 @@ const breadcrumbs = computed(() => {
     if (route.path.includes('/requirements')) crumbs.push({ path: '', title: '需求管理' })
     if (route.path.includes('/generate')) crumbs.push({ path: '', title: '智能生成' })
     if (route.path.includes('/cases')) crumbs.push({ path: '', title: '用例库' })
+    if (route.path.includes('/members')) crumbs.push({ path: '', title: '项目成员' })
   } else if (route.path === '/projects') {
     crumbs.push({ path: '', title: '项目管理' })
   } else if (route.path === '/settings') {
@@ -115,7 +116,11 @@ const breadcrumbs = computed(() => {
 
 async function handleCommand(cmd: string) {
   if (cmd === 'logout') {
-    await ElMessageBox.confirm('确认退出登录？', '提示', { type: 'warning' })
+    await ElMessageBox.confirm('确认退出登录？', '提示', {
+      type: 'warning',
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+    })
     auth.logout()
     router.push('/login')
   } else if (cmd === 'profile') {

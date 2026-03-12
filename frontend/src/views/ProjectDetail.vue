@@ -9,6 +9,7 @@
         <router-link :to="`/projects/${projectStore.current.id}/requirements`" class="tab" :class="{ active: route.path.includes('/requirements') }">需求管理</router-link>
         <router-link :to="`/projects/${projectStore.current.id}/generate`" class="tab" :class="{ active: route.path.includes('/generate') }">智能生成</router-link>
         <router-link :to="`/projects/${projectStore.current.id}/cases`" class="tab" :class="{ active: route.path.includes('/cases') }">用例库</router-link>
+        <router-link :to="`/projects/${projectStore.current.id}/members`" class="tab" :class="{ active: route.path.includes('/members') }">项目成员</router-link>
       </div>
     </div>
     <router-view />

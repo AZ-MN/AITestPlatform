@@ -197,3 +197,28 @@ async def add_member(
     db.add(member)
     db.commit()
     return {"message": "成员添加成功"}
+
+
+@router.delete("/{project_id}/members/{member_id}", summary="移除项目成员")
+async def remove_member(
+    project_id: int,
+    member_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if current_user.role != "super_admin" and proj.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="仅项目创建者或系统管理员可管理成员")
+    member = db.query(ProjectMember).filter(
+        ProjectMember.id == member_id,
+        ProjectMember.project_id == project_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="成员不存在")
+    if member.user_id == proj.created_by:
+        raise HTTPException(status_code=400, detail="不能移除项目创建者")
+    db.delete(member)
+    db.commit()
+    return {"message": "成员移除成功"}

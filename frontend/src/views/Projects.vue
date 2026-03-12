@@ -16,7 +16,12 @@
         @keydown.space.prevent="openProject(p)"
       >
         <div class="card-top">
-          <span class="p-icon">{{ p.icon }}</span>
+          <div class="main-info">
+            <span class="p-icon">{{ p.icon }}</span>
+            <el-tooltip :content="p.name" placement="top">
+              <span class="p-name">{{ p.name }}</span>
+            </el-tooltip>
+          </div>
           <div class="top-right">
             <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small">
               {{ p.status === 'active' ? '进行中' : '已归档' }}
@@ -40,7 +45,6 @@
             </div>
           </div>
         </div>
-        <div class="p-name">{{ p.name }}</div>
         <div class="p-desc">{{ p.description || '暂无描述' }}</div>
         <div class="p-stats">
           <span>📋 {{ p.case_count }} 用例</span>
@@ -57,7 +61,7 @@
     </div>
 
     <!-- 新建项目弹窗 -->
-    <el-dialog v-model="showCreate" :title="editMode ? '编辑项目' : '新建项目'" width="480px">
+    <el-dialog v-model="showCreate" :title="editMode ? '编辑项目' : '新建项目'" width="480px" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" label-width="80px">
         <el-form-item label="项目图标">
           <div class="icon-picker">
@@ -138,7 +142,11 @@ async function handleSave() {
 }
 
 async function archiveProject(p: Project) {
-  await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', {
+    type: 'warning',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   try {
     await projectApi.archive(p.id)
   } catch (e: any) {
@@ -153,7 +161,11 @@ async function archiveProject(p: Project) {
 }
 
 async function unarchiveProject(p: Project) {
-  await ElMessageBox.confirm(`确认将项目「${p.name}」取消归档？`, '取消归档确认', { type: 'info' })
+  await ElMessageBox.confirm(`确认将项目「${p.name}」取消归档？`, '取消归档确认', {
+    type: 'info',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   try {
     await projectApi.unarchive(p.id)
   } catch (e: any) {
@@ -175,7 +187,13 @@ async function deleteProject(p: Project) {
   await ElMessageBox.confirm(
     `确认永久删除项目「${p.name}」？该操作将同时删除其需求和测试用例，且不可恢复。`,
     '删除确认',
-    { type: 'error', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+    {
+      type: 'error',
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      closeOnClickModal: false,
+      closeOnPressEscape: false,
+    }
   )
   try {
     await projectApi.purge(p.id)
@@ -215,10 +233,17 @@ async function deleteProject(p: Project) {
 .project-card:hover { border-color: #4f6ef7; box-shadow: 0 4px 16px rgba(79,110,247,.1); transform: translateY(-1px); }
 .project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.main-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .top-right { display: flex; align-items: center; gap: 8px; }
 .card-icons { display: flex; align-items: center; }
-.p-icon { font-size: 32px; }
-.p-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+.p-icon { font-size: 28px; flex-shrink: 0; }
+.p-name {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 36px; }
 .p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
 .card-hint { font-size: 12px; color: #9ca3af; }

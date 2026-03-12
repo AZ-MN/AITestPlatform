@@ -31,6 +31,8 @@
         <el-option label="已作废" value="deprecated" />
       </el-select>
       <el-button @click="resetFilters">重置</el-button>
+      <el-button type="warning" plain @click="loadMinimalRegression">最小回归集</el-button>
+      <el-button v-if="regressionMode" @click="exitRegressionMode">恢复列表</el-button>
       <div class="filter-stats">
         共 <strong>{{ total }}</strong> 条
         <template v-if="selectedIds.length">
@@ -49,6 +51,7 @@
         v-loading="loading"
         :data="cases"
         @selection-change="handleSelect"
+        @row-click="handleCaseRowClick"
         row-key="id"
         max-height="calc(100vh - 320px)"
       >
@@ -82,40 +85,6 @@
             <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="viewCase(row)">查看</el-button>
-            <el-button link type="success" size="small" @click="editCase(row)">编辑</el-button>
-            <el-button
-              v-if="row.status === 'draft'"
-              link
-              type="warning"
-              size="small"
-              @click="submitReview(row)"
-            >
-              提审
-            </el-button>
-            <el-button
-              v-else-if="row.status === 'pending_review'"
-              link
-              type="success"
-              size="small"
-              @click="approveCase(row)"
-            >
-              通过
-            </el-button>
-            <el-button
-              v-if="row.status === 'pending_review'"
-              link
-              type="info"
-              size="small"
-              @click="rejectCase(row)"
-            >
-              驳回
-            </el-button>
-            <el-button link type="danger" size="small" @click="deleteCase(row)">删除</el-button>
-          </template>
-        </el-table-column>
       </el-table>
       <div class="pagination">
         <el-pagination background layout="total, sizes, prev, pager, next"
@@ -125,8 +94,39 @@
     </div>
 
     <!-- 用例详情弹窗 -->
-    <el-drawer v-model="showDetail" title="用例详情" size="600px">
+    <el-drawer v-model="showDetail" title="用例详情" size="600px" :close-on-click-modal="true">
       <div v-if="detailCase" class="case-detail">
+        <div class="detail-top-actions">
+          <el-tooltip :content="editingCase ? '取消编辑' : '编辑用例'" placement="top">
+            <el-button text circle @click="toggleCaseEdit">
+              <el-icon><Edit /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="删除用例" placement="top">
+            <el-button text circle type="danger" @click="deleteCase(detailCase)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
+        <div v-if="editingCase" class="case-edit-form">
+          <el-form label-width="90px">
+            <el-form-item label="标题"><el-input v-model="caseForm.title" /></el-form-item>
+            <el-form-item label="模块"><el-input v-model="caseForm.module" /></el-form-item>
+            <el-form-item label="优先级">
+              <el-select v-model="caseForm.case_level" style="width:100%">
+                <el-option label="P0" value="P0" /><el-option label="P1" value="P1" /><el-option label="P2" value="P2" /><el-option label="P3" value="P3" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="caseForm.status" style="width:100%">
+                <el-option label="草稿" value="draft" /><el-option label="待评审" value="pending_review" /><el-option label="已评审" value="reviewed" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="前置条件"><el-input v-model="caseForm.preconditions" type="textarea" :rows="2" /></el-form-item>
+            <el-form-item label="备注"><el-input v-model="caseForm.remarks" type="textarea" :rows="2" /></el-form-item>
+          </el-form>
+        </div>
+        <template v-else>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="用例ID">{{ detailCase.case_id }}</el-descriptions-item>
           <el-descriptions-item label="优先级">
@@ -160,17 +160,37 @@
           <span>用例质量评分：</span>
           <el-rate v-model="ratingVal" @change="submitRating" />
         </div>
+        <div class="detail-actions">
+          <el-button v-if="detailCase.status === 'draft'" size="small" type="warning" @click="submitReview(detailCase)">提交评审</el-button>
+          <el-button v-else-if="detailCase.status === 'pending_review'" size="small" type="success" @click="approveCase(detailCase)">评审通过</el-button>
+          <el-button v-if="detailCase.status === 'pending_review'" size="small" @click="rejectCase(detailCase)">驳回</el-button>
+        </div>
+        <div class="review-log" v-if="reviewLogs.length">
+          <h4>评审记录</h4>
+          <div class="review-item" v-for="log in reviewLogs" :key="log.id">
+            <div class="review-meta">{{ fmtDate(log.created_at) }} · {{ log.created_by_name || '用户' }} · {{ actionLabel(log.action) }}</div>
+            <div class="review-desc" v-if="log.comment">{{ log.comment }}</div>
+            <div class="review-desc" v-else-if="log.from_status || log.to_status">{{ statusLabel(log.from_status || '') }} → {{ statusLabel(log.to_status || '') }}</div>
+          </div>
+        </div>
+        </template>
+        <div v-if="editingCase" class="detail-actions">
+          <el-button @click="toggleCaseEdit">取消</el-button>
+          <el-button type="primary" :loading="savingCase" @click="saveCaseEdit">保存用例</el-button>
+        </div>
       </div>
     </el-drawer>
 
     <!-- 导出弹窗 -->
-    <el-dialog v-model="showExport" title="导出用例" width="400px">
+    <el-dialog v-model="showExport" title="导出用例" width="400px" :close-on-click-modal="false">
       <el-form label-width="80px">
         <el-form-item label="导出格式">
           <el-radio-group v-model="exportFmt">
             <el-radio value="excel">Excel (.xlsx)</el-radio>
             <el-radio value="markdown">Markdown (.md)</el-radio>
             <el-radio value="csv">CSV (.csv)</el-radio>
+            <el-radio value="postman">Postman (.json)</el-radio>
+            <el-radio value="jmeter">JMeter (.jmx)</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="导出范围">
@@ -193,10 +213,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Plus, Download, Search } from '@element-plus/icons-vue'
+import { Plus, Download, Search, Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { caseApi } from '@/api/cases'
-import type { TestCase } from '@/api/types'
+import type { TestCase, CaseReviewLog } from '@/api/types'
 
 const route = useRoute()
 const projectId = computed(() => Number(route.params.id))
@@ -210,10 +230,22 @@ const showDetail = ref(false)
 const showCreate = ref(false)
 const showExport = ref(false)
 const detailCase = ref<TestCase | null>(null)
+const reviewLogs = ref<CaseReviewLog[]>([])
+const editingCase = ref(false)
+const savingCase = ref(false)
+const caseForm = reactive({
+  title: '',
+  module: '',
+  case_level: 'P1',
+  status: 'draft',
+  preconditions: '',
+  remarks: '',
+})
 const ratingVal = ref(0)
 const exporting = ref(false)
 const exportFmt = ref('excel')
 const exportScope = ref('all')
+const regressionMode = ref(false)
 
 const filters = reactive({
   keyword: '', test_type: '', case_level: '', status: ''
@@ -232,6 +264,7 @@ async function fetchCases() {
     })
     cases.value = res.items
     total.value = res.total
+    regressionMode.value = false
   } finally { loading.value = false }
 }
 
@@ -245,21 +278,75 @@ function resetFilters() {
   fetchCases()
 }
 
-function viewCase(c: TestCase) {
-  detailCase.value = c
-  ratingVal.value = c.rating || 0
-  showDetail.value = true
+async function loadMinimalRegression() {
+  const prompt = await ElMessageBox.prompt('可选：输入变更模块（逗号分隔）', '生成最小回归集', {
+    confirmButtonText: '生成',
+    cancelButtonText: '取消',
+    inputPlaceholder: '如：登录,支付',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  }).catch(() => null)
+  if (!prompt) return
+  loading.value = true
+  try {
+    const res = await caseApi.minimalRegression({
+      project_id: projectId.value,
+      changed_modules: prompt.value || undefined,
+      limit: 50,
+    })
+    cases.value = res.items
+    total.value = res.total
+    regressionMode.value = true
+    ElMessage.success(`已生成最小回归集，共 ${res.total} 条`)
+  } finally { loading.value = false }
 }
 
-function editCase(c: TestCase) {
-  detailCase.value = { ...c }
-  showCreate.value = true
+function exitRegressionMode() {
+  fetchCases()
+}
+
+function viewCase(c: TestCase) {
+  detailCase.value = c
+  editingCase.value = false
+  fillCaseForm(c)
+  ratingVal.value = c.rating || 0
+  showDetail.value = true
+  loadReviews(c.id)
+}
+
+async function loadReviews(caseId: number) {
+  reviewLogs.value = await caseApi.reviews(caseId)
+}
+
+function fillCaseForm(c: TestCase) {
+  caseForm.title = c.title || ''
+  caseForm.module = c.module || ''
+  caseForm.case_level = c.case_level || 'P1'
+  caseForm.status = c.status || 'draft'
+  caseForm.preconditions = c.preconditions || ''
+  caseForm.remarks = c.remarks || ''
+}
+
+function toggleCaseEdit() {
+  if (!detailCase.value) return
+  editingCase.value = !editingCase.value
+  if (editingCase.value) fillCaseForm(detailCase.value)
+}
+
+function handleCaseRowClick(row: TestCase, column: any) {
+  if (column?.type === 'selection') return
+  viewCase(row)
 }
 
 async function deleteCase(c: TestCase) {
-  await ElMessageBox.confirm(`确认删除「${c.title}」？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确认删除「${c.title}」？`, '删除确认', {
+    type: 'warning',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   await caseApi.remove(c.id)
   ElMessage.success('删除成功')
+  if (detailCase.value?.id === c.id) showDetail.value = false
   fetchCases()
 }
 
@@ -275,6 +362,35 @@ async function updateStatus(c: TestCase, status: 'draft' | 'pending_review' | 'r
   }
   ElMessage.success(msg)
   await fetchCases()
+  if (detailCase.value?.id === c.id) {
+    const latest = cases.value.find(item => item.id === c.id)
+    if (latest) {
+      detailCase.value = latest
+      await loadReviews(c.id)
+    }
+  }
+}
+
+async function saveCaseEdit() {
+  if (!detailCase.value) return
+  savingCase.value = true
+  try {
+    const updated = await caseApi.update(detailCase.value.id, {
+      title: caseForm.title,
+      module: caseForm.module,
+      case_level: caseForm.case_level,
+      status: caseForm.status,
+      preconditions: caseForm.preconditions,
+      remarks: caseForm.remarks,
+    })
+    detailCase.value = updated
+    await fetchCases()
+    editingCase.value = false
+    await loadReviews(updated.id)
+    ElMessage.success('用例已更新')
+  } finally {
+    savingCase.value = false
+  }
 }
 
 async function submitReview(c: TestCase) {
@@ -290,7 +406,11 @@ async function rejectCase(c: TestCase) {
 }
 
 async function batchDelete() {
-  await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条用例？`, '批量删除', { type: 'warning' })
+  await ElMessageBox.confirm(`确认删除选中的 ${selectedIds.value.length} 条用例？`, '批量删除', {
+    type: 'warning',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   await caseApi.batchDelete(selectedIds.value)
   ElMessage.success('批量删除成功')
   selectedIds.value = []
@@ -357,7 +477,7 @@ async function handleExport() {
       case_ids: exportScope.value === 'selected' ? selectedIds.value : undefined,
     }
     const blob = await caseApi.export(payload)
-    const ext = { excel: 'xlsx', markdown: 'md', csv: 'csv' }[exportFmt.value] || 'xlsx'
+    const ext = { excel: 'xlsx', markdown: 'md', csv: 'csv', postman: 'json', jmeter: 'jmx' }[exportFmt.value] || 'xlsx'
     const url = URL.createObjectURL(blob as unknown as Blob)
     const a = document.createElement('a')
     a.href = url
@@ -379,10 +499,13 @@ const statusType = (s: string): 'success' | 'primary' | 'warning' | 'info' | 'da
   (({ draft: 'info', pending_review: 'warning', reviewed: 'success', deprecated: 'danger' } as const)[
     s as 'draft' | 'pending_review' | 'reviewed' | 'deprecated'
   ] || 'info')
+const actionLabel = (a: string) =>
+  ({ update: '编辑', status_change: '状态变更', rating: '评分反馈' } as Record<string, string>)[a] || a
+const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
 </script>
 
 <style scoped>
-.case-library { max-width: 1400px; }
+.case-library { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .header-actions { display: flex; gap: 8px; }
@@ -399,6 +522,21 @@ const statusType = (s: string): 'success' | 'primary' | 'warning' | 'info' | 'da
 .case-id { font-family: monospace; font-size: 12px; color: #6b7280; }
 
 .case-detail { padding: 4px; }
+.detail-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  gap: 6px;
+}
+.case-edit-form { padding-top: 4px; }
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
 .steps-section { margin-top: 20px; }
 .steps-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
 .step-item { display: flex; gap: 10px; margin-bottom: 10px; }
@@ -413,4 +551,9 @@ const statusType = (s: string): 'success' | 'primary' | 'warning' | 'info' | 'da
 .step-expected { font-size: 12px; color: #059669; background: #f0fdf4; border-radius: 4px; padding: 3px 8px; }
 .remarks { margin-top: 12px; font-size: 13px; color: var(--text-secondary); background: #f9fafb; border-radius: 6px; padding: 8px; }
 .rating-section { margin-top: 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; border-top: 1px solid var(--border); padding-top: 12px; }
+.review-log { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+.review-log h4 { font-size: 14px; margin-bottom: 8px; }
+.review-item { padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.review-meta { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+.review-desc { font-size: 13px; }
 </style>

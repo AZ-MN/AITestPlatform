@@ -67,7 +67,7 @@
     </div>
 
     <!-- 添加/编辑弹窗 -->
-    <el-dialog v-model="showDialog" :title="editId ? '编辑模型配置' : '添加模型配置'" width="520px">
+    <el-dialog v-model="showDialog" :title="editId ? '编辑模型配置' : '添加模型配置'" width="520px" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" label-width="110px">
         <el-form-item label="供应商" prop="provider" :rules="[{ required: true }]">
           <el-select v-model="form.provider" placeholder="选择供应商" style="width:100%" @change="onProviderChange">
@@ -201,7 +201,11 @@ async function testModel(cfg: AIModelConfig) {
 }
 
 async function removeConfig(cfg: AIModelConfig) {
-  await ElMessageBox.confirm(`确认删除「${cfg.model_name}」配置？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确认删除「${cfg.model_name}」配置？`, '删除确认', {
+    type: 'warning',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   await modelApi.remove(cfg.id)
   ElMessage.success('已删除')
   configs.value = await modelApi.list()
@@ -209,7 +213,7 @@ async function removeConfig(cfg: AIModelConfig) {
 </script>
 
 <style scoped>
-.settings-page { max-width: 1100px; }
+.settings-page { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 

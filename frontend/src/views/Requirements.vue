@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <el-table v-else v-loading="loading" :data="requirements" row-class-name="req-row">
+    <el-table v-else v-loading="loading" :data="requirements" row-class-name="req-row" @row-click="handleReqRowClick">
       <el-table-column label="需求标题" prop="title" min-width="200" show-overflow-tooltip />
       <el-table-column label="来源" width="90">
         <template #default="{ row }">
@@ -44,20 +44,10 @@
       <el-table-column label="创建时间" width="160">
         <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" type="primary" link @click="viewReq(row)">查看需求点</el-button>
-          <el-button size="small" type="success" link
-            @click="$router.push(`/projects/${projectId}/generate?req_id=${row.id}`)">
-            生成用例
-          </el-button>
-          <el-button size="small" type="danger" link @click="deleteReq(row)">删除</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
     <!-- 上传文档弹窗 -->
-    <el-dialog v-model="showUpload" title="上传需求文档" width="500px">
+    <el-dialog v-model="showUpload" title="上传需求文档" width="500px" :close-on-click-modal="false">
       <el-form :model="uploadForm" label-width="90px">
         <el-form-item label="需求标题">
           <el-input v-model="uploadForm.title" placeholder="如：用户中心 V2.0 需求" />
@@ -83,7 +73,7 @@
     </el-dialog>
 
     <!-- 手动输入弹窗 -->
-    <el-dialog v-model="showText" title="手动输入需求" width="600px">
+    <el-dialog v-model="showText" title="手动输入需求" width="600px" :close-on-click-modal="false">
       <el-form :model="textForm" label-width="90px">
         <el-form-item label="需求标题">
           <el-input v-model="textForm.title" placeholder="需求标题" />
@@ -102,16 +92,34 @@
       </template>
     </el-dialog>
 
-    <!-- 需求点查看弹窗 -->
-    <el-dialog v-model="showPoints" :title="`需求点 - ${currentReq?.title}`" width="760px" top="5vh">
+    <!-- 需求点查看抽屉 -->
+    <el-drawer v-model="showPoints" :title="`需求点 - ${currentReq?.title}`" size="760px" :close-on-click-modal="true">
       <div class="points-toolbar">
         <span class="points-count">共 {{ currentPoints.length }} 个需求点</span>
-        <el-button size="small" type="success"
-          @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
-          生成测试用例 →
-        </el-button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <el-tooltip :content="editingReq ? '取消编辑' : '编辑需求'" placement="top">
+            <el-button text circle @click="toggleEditReq">
+              <el-icon><Edit /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="删除需求" placement="top">
+            <el-button text circle type="danger" @click="deleteCurrentReq">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
       </div>
-      <div class="points-list">
+      <div v-if="editingReq" class="req-edit-form">
+        <el-form label-width="90px">
+          <el-form-item label="需求标题">
+            <el-input v-model="editingTitle" />
+          </el-form-item>
+          <el-form-item label="需求点JSON">
+            <el-input v-model="editingPointsJson" type="textarea" :rows="16" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <div v-else class="points-list">
         <div v-for="(p, i) in currentPoints" :key="i" class="point-item">
           <div class="point-header">
             <span class="point-id">{{ p.id || `REQ-${i+1}` }}</span>
@@ -125,14 +133,22 @@
           </div>
         </div>
       </div>
-    </el-dialog>
+      <div class="points-actions">
+        <el-button v-if="editingReq" @click="toggleEditReq">取消</el-button>
+        <el-button v-if="editingReq" type="primary" :loading="savingReqEdit" @click="saveReqEdit">保存需求</el-button>
+        <el-button size="small" type="success"
+          @click="$router.push(`/projects/${projectId}/generate?req_id=${currentReq?.id}`); showPoints=false">
+          生成测试用例
+        </el-button>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Upload } from '@element-plus/icons-vue'
+import { Plus, Upload, Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import type { Requirement, RequirementPoint } from '@/api/types'
@@ -149,6 +165,10 @@ const showText = ref(false)
 const showPoints = ref(false)
 const currentReq = ref<Requirement | null>(null)
 const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
+const editingReq = ref(false)
+const savingReqEdit = ref(false)
+const editingTitle = ref('')
+const editingPointsJson = ref('')
 const uploadFile = ref<File | null>(null)
 
 const uploadForm = reactive({ title: '', useAi: true })
@@ -201,14 +221,66 @@ async function handleTextSave() {
 
 function viewReq(req: Requirement) {
   currentReq.value = req
+  editingReq.value = false
+  editingTitle.value = req.title
+  editingPointsJson.value = JSON.stringify((req.parse_result as RequirementPoint[]) || [], null, 2)
   showPoints.value = true
 }
 
+function handleReqRowClick(row: Requirement, column: any) {
+  if (column?.type === 'selection') return
+  viewReq(row)
+}
+
 async function deleteReq(req: Requirement) {
-  await ElMessageBox.confirm(`确认删除需求「${req.title}」？`, '删除确认', { type: 'warning' })
+  await ElMessageBox.confirm(`确认删除需求「${req.title}」？`, '删除确认', {
+    type: 'warning',
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+  })
   await requirementApi.remove(req.id)
   ElMessage.success('删除成功')
   fetchReqs()
+}
+
+async function deleteCurrentReq() {
+  if (!currentReq.value) return
+  await deleteReq(currentReq.value)
+  showPoints.value = false
+}
+
+function toggleEditReq() {
+  if (!currentReq.value) return
+  editingReq.value = !editingReq.value
+  if (editingReq.value) {
+    editingTitle.value = currentReq.value.title
+    editingPointsJson.value = JSON.stringify((currentReq.value.parse_result as RequirementPoint[]) || [], null, 2)
+  }
+}
+
+async function saveReqEdit() {
+  if (!currentReq.value) return
+  let parsed: RequirementPoint[] = []
+  try {
+    parsed = JSON.parse(editingPointsJson.value || '[]')
+  } catch {
+    ElMessage.error('需求点 JSON 格式错误')
+    return
+  }
+  savingReqEdit.value = true
+  try {
+    const updated = await requirementApi.update(currentReq.value.id, {
+      title: editingTitle.value,
+      parse_result: parsed,
+      status: 'parsed',
+    })
+    currentReq.value = updated
+    await fetchReqs()
+    editingReq.value = false
+    ElMessage.success('需求已更新')
+  } finally {
+    savingReqEdit.value = false
+  }
 }
 
 function fmtDate(s: string) {
@@ -217,7 +289,7 @@ function fmtDate(s: string) {
 </script>
 
 <style scoped>
-.req-page { max-width: 1200px; }
+.req-page { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .header-actions { display: flex; gap: 8px; }
@@ -227,11 +299,20 @@ function fmtDate(s: string) {
 .empty-state h3 { font-size: 18px; margin-bottom: 8px; }
 .empty-state p { color: var(--text-secondary); font-size: 14px; }
 
-:deep(.req-row) { cursor: default; }
+:deep(.req-row) { cursor: pointer; }
 
 .points-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .points-count { font-size: 13px; color: var(--text-secondary); }
 .points-list { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.req-edit-form { padding-top: 8px; }
+.points-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .point-item { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
 .point-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .point-id { font-size: 11px; color: #9ca3af; font-family: monospace; }
