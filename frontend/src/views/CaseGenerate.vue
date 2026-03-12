@@ -5,9 +5,6 @@
         <h2>智能生成测试用例</h2>
         <div class="sub-title">在当前页面完成配置、生成与结果查看，减少跨模块跳转</div>
       </div>
-      <div class="header-actions">
-        <el-button @click="resetConfig">重置配置</el-button>
-      </div>
     </div>
 
     <div class="generate-layout">
@@ -24,7 +21,14 @@
             style="margin-bottom:12px"
           />
 
-          <div class="section-label"><span class="sec-index">1</span>选择需求来源</div>
+          <div class="section-label"><span class="sec-index">1</span>选择模型（必选）</div>
+          <el-select v-model="config.ai_provider" placeholder="请选择用于生成的AI模型" style="width:100%">
+            <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
+              :label="`${providerName(m.provider)} · ${m.model_name}`" />
+            <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
+          </el-select>
+
+          <div class="section-label"><span class="sec-index">2</span>选择需求来源</div>
           <el-select v-model="config.requirement_id" placeholder="选择已解析的需求" clearable style="width:100%"
             @change="onReqChange">
             <el-option v-for="r in requirements" :key="r.id" :label="`${r.title} (${r.req_points_count}点)`" :value="r.id" />
@@ -35,7 +39,7 @@
             <div class="summary-title">{{ selectedReqTitle }}</div>
           </div>
 
-          <div class="section-label"><span class="sec-index">2</span>确定本次生成目标</div>
+          <div class="section-label"><span class="sec-index">3</span>确定本次生成目标</div>
           <el-radio-group v-model="config.test_type" class="type-group">
             <el-radio-button value="functional">功能测试</el-radio-button>
             <el-radio-button value="api">接口测试</el-radio-button>
@@ -54,11 +58,7 @@
             <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
           </el-select>
 
-          <div class="section-label"><span class="sec-index">3</span>选择覆盖场景</div>
-          <div class="scenario-shortcuts">
-            <el-button size="small" @click="setBasicScenarios">基础场景</el-button>
-            <el-button size="small" @click="setAllScenarios">全场景</el-button>
-          </div>
+          <div class="section-label"><span class="sec-index">4</span>选择覆盖场景</div>
           <el-checkbox-group v-model="config.cover_scenarios" class="scenario-group">
             <el-checkbox value="normal">正常流程</el-checkbox>
             <el-checkbox value="exception">异常场景</el-checkbox>
@@ -70,13 +70,6 @@
 
           <el-collapse class="advanced-collapse" v-model="advancedPanels">
             <el-collapse-item title="高级参数（可选）" name="advanced">
-              <div class="section-label small">AI 模型</div>
-              <el-select v-model="config.ai_provider" placeholder="选择AI供应商" style="width:100%">
-                <el-option v-for="m in modelConfigs" :key="m.id" :value="m.provider"
-                  :label="`${providerName(m.provider)} · ${m.model_name}`" />
-                <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
-              </el-select>
-
               <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
               <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
 
@@ -89,14 +82,14 @@
 
         <div class="config-footer">
           <div class="footer-actions">
-            <el-button @click="resetConfig">重置</el-button>
-            <el-button type="primary" size="large" :loading="generating" :disabled="!canGenerate"
+            <el-button size="default" @click="resetConfig">重置</el-button>
+            <el-button type="primary" size="default" :loading="generating" :disabled="!canGenerate"
               @click="handleGenerate">
               <el-icon v-if="!generating"><MagicStick /></el-icon>
               {{ generating ? 'AI 生成中...' : '开始生成' }}
             </el-button>
           </div>
-          <div class="footer-hint">生成后可在顶部「用例库」查看结果与评审</div>
+          <div class="footer-hint">模型与需求选择完成后即可生成</div>
           <div v-if="lastResult" class="result-summary">
             <div class="result-line">生成完成：{{ lastResult.total }} 条 · {{ lastResult.elapsed_seconds }}s</div>
           </div>
@@ -168,7 +161,7 @@ const config = reactive({
 })
 
 const canGenerate = computed(() =>
-  reqPoints.value.length > 0
+  !!config.ai_provider && reqPoints.value.length > 0 && modelConfigs.value.length > 0
 )
 
 const modules = computed(() => {
@@ -249,16 +242,9 @@ function resetConfig() {
   lastResult.value = null
 }
 
-function setBasicScenarios() {
-  config.cover_scenarios = ['normal', 'exception', 'boundary']
-}
-
-function setAllScenarios() {
-  config.cover_scenarios = ['normal', 'exception', 'boundary', 'permission', 'compatibility', 'security']
-}
-
 async function handleGenerate() {
   if (!reqPoints.value.length) return ElMessage.warning('请先选择需求来源')
+  if (!config.ai_provider || !modelConfigs.value.length) return ElMessage.warning('请先选择可用模型')
   generating.value = true
   lastResult.value = null
   const startAt = Date.now()
@@ -352,11 +338,10 @@ function providerName(p: string): string {
 </script>
 
 <style scoped>
-.generate-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.page-header { margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.generate-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+.page-header { margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-shrink: 0; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
-.header-actions { display: flex; gap: 8px; }
 
 .generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
 .config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
@@ -393,7 +378,6 @@ function providerName(p: string): string {
 .type-group :deep(.el-radio-button__inner) { width: 100%; }
 
 .scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.scenario-shortcuts { display: flex; gap: 8px; margin-bottom: 8px; }
 
 .req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
 .summary-title { margin-top: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -420,10 +404,11 @@ function providerName(p: string): string {
 :deep(.mindmap-tree .el-tree-node) { min-width: 0; }
 :deep(.mindmap-tree .el-tree-node__children) { padding-left: 18px; }
 @media (max-width: 1024px) {
-  .generate-layout { grid-template-columns: 1fr; grid-template-rows: minmax(340px, 1fr) minmax(260px, 1fr); }
+  .generate-layout { grid-template-columns: 1fr; gap: 12px; }
+  .config-panel, .preview-panel { min-height: 300px; }
 }
 @media (max-width: 768px) {
-  .page-header { flex-direction: column; align-items: flex-start; }
+  .page-header { align-items: flex-start; }
   .scenario-group { grid-template-columns: 1fr; }
 }
 </style>
