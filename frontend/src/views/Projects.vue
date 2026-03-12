@@ -23,7 +23,7 @@
             </el-tooltip>
           </div>
           <div class="top-right">
-            <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small">
+            <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small" :class="['status-tag', p.status === 'active' ? 'is-active' : 'is-archived']">
               {{ p.status === 'active' ? '进行中' : '已归档' }}
             </el-tag>
             <div class="card-icons" @click.stop>
@@ -45,13 +45,13 @@
             </div>
           </div>
         </div>
-        <div class="p-desc">{{ p.description || '暂无描述' }}</div>
+        <div class="p-desc">{{ p.description || '暂无项目描述，点击进入后可补充。' }}</div>
         <div class="p-stats">
-          <span>📋 {{ p.case_count }} 用例</span>
-          <span>📄 {{ p.req_count }} 需求</span>
-          <span>👥 {{ p.member_count }} 成员</span>
+          <span class="stat-pill"><em>📄</em>{{ p.req_count }} 需求</span>
+          <span class="stat-pill"><em>📋</em>{{ p.case_count }} 用例</span>
+          <span class="stat-pill"><em>👥</em>{{ p.member_count }} 成员</span>
         </div>
-        <div class="card-hint">点击卡片进入项目</div>
+        <div class="card-hint">点击任意区域进入项目</div>
       </div>
 
       <div class="add-card" @click="showCreate = true">
@@ -223,20 +223,45 @@ async function deleteProject(p: Project) {
 
 .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
   padding: 20px;
   transition: all .2s;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
-.project-card:hover { border-color: #4f6ef7; box-shadow: 0 4px 16px rgba(79,110,247,.1); transform: translateY(-1px); }
+.project-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f6ef7 0%, #7c92ff 100%);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.project-card:hover::before { opacity: 1; }
+.project-card:hover { border-color: #c7d2fe; box-shadow: 0 8px 20px rgba(79,110,247,.12); transform: translateY(-2px); }
 .project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .main-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .top-right { display: flex; align-items: center; gap: 8px; }
-.card-icons { display: flex; align-items: center; }
-.p-icon { font-size: 28px; flex-shrink: 0; }
+.card-icons { display: flex; align-items: center; opacity: .55; transition: opacity .2s; }
+.project-card:hover .card-icons, .project-card:focus-within .card-icons { opacity: 1; }
+.p-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5ff;
+}
 .p-name {
   font-size: 16px;
   font-weight: 600;
@@ -244,15 +269,29 @@ async function deleteProject(p: Project) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 36px; }
-.p-stats { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
+.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; min-height: 38px; line-height: 1.45; }
+.p-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.stat-pill {
+  font-size: 12px;
+  color: #4b5563;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.stat-pill em { font-style: normal; opacity: .9; }
 .card-hint { font-size: 12px; color: #9ca3af; }
+.status-tag { border-radius: 999px; font-weight: 600; }
 :deep(.card-icons .el-button + .el-button) { margin-left: 0; }
+:deep(.card-icons .el-button.is-text) { width: 26px; height: 26px; }
 
 .add-card {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 2px dashed var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 20px;
   display: flex;
   flex-direction: column;
