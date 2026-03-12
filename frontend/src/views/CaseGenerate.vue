@@ -8,9 +8,10 @@
     </div>
 
     <div class="generate-layout">
-      <!-- 左：生成配置 -->
+      <div class="left-column">
+      <!-- 左：主流程配置 -->
       <div class="config-panel page-card">
-        <h3>生成配置</h3>
+        <h3>生成流程配置</h3>
         <div class="config-body">
           <el-alert
             v-if="!modelConfigs.length"
@@ -31,34 +32,33 @@
           <div class="section-label"><span class="sec-index">2</span>选择需求来源</div>
           <el-select v-model="config.requirement_id" placeholder="选择已解析的需求" clearable style="width:100%"
             @change="onReqChange">
-            <el-option v-for="r in requirements" :key="r.id" :label="`${r.title} (${r.req_points_count}点)`" :value="r.id" />
+            <el-option v-for="r in requirements" :key="r.id" :label="r.title" :value="r.id" />
           </el-select>
 
           <div v-if="reqPoints.length" class="req-summary">
-            <el-tag type="success" size="small">{{ reqPoints.length }} 个需求点已加载</el-tag>
             <div class="summary-title">{{ selectedReqTitle }}</div>
           </div>
 
-          <div class="section-label"><span class="sec-index">3</span>确定本次生成目标</div>
+          <div class="section-label"><span class="sec-index">3</span>选择覆盖模块（可选）</div>
+          <el-select v-model="config.module_filter" placeholder="全部模块" clearable style="width:100%">
+            <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
+          </el-select>
+
+          <div class="section-label"><span class="sec-index">4</span>选择测试类型</div>
           <el-radio-group v-model="config.test_type" class="type-group">
             <el-radio-button value="functional">功能测试</el-radio-button>
             <el-radio-button value="api">接口测试</el-radio-button>
             <el-radio-button value="unit">单元测试</el-radio-button>
           </el-radio-group>
 
-          <div class="section-label small">用例颗粒度</div>
+          <div class="section-label"><span class="sec-index">5</span>选择用例颗粒度</div>
           <el-radio-group v-model="config.granularity">
             <el-radio value="coarse">粗（按流程）</el-radio>
             <el-radio value="medium">中（按功能点）</el-radio>
             <el-radio value="fine">细（按单一场景）</el-radio>
           </el-radio-group>
 
-          <div class="section-label small">覆盖模块（可选）</div>
-          <el-select v-model="config.module_filter" placeholder="全部模块" clearable style="width:100%">
-            <el-option v-for="m in modules" :key="m" :label="m" :value="m" />
-          </el-select>
-
-          <div class="section-label"><span class="sec-index">4</span>选择覆盖场景</div>
+          <div class="section-label"><span class="sec-index">6</span>选择覆盖场景</div>
           <el-checkbox-group v-model="config.cover_scenarios" class="scenario-group">
             <el-checkbox value="normal">正常流程</el-checkbox>
             <el-checkbox value="exception">异常场景</el-checkbox>
@@ -67,17 +67,6 @@
             <el-checkbox value="compatibility">兼容性</el-checkbox>
             <el-checkbox value="security">数据安全</el-checkbox>
           </el-checkbox-group>
-
-          <el-collapse class="advanced-collapse" v-model="advancedPanels">
-            <el-collapse-item title="高级参数（可选）" name="advanced">
-              <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
-              <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
-
-              <div class="section-label small">补充说明（可选）</div>
-              <el-input v-model="config.custom_instructions" type="textarea" :rows="2"
-                placeholder="如：重点关注支付流程、用例需包含并发场景..." />
-            </el-collapse-item>
-          </el-collapse>
         </div>
 
         <div class="config-footer">
@@ -94,6 +83,15 @@
             <div class="result-line">生成完成：{{ lastResult.total }} 条 · {{ lastResult.elapsed_seconds }}s</div>
           </div>
         </div>
+      </div>
+      <div class="advanced-panel page-card">
+        <h3>高级参数（隔离配置）</h3>
+        <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
+        <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
+        <div class="section-label small">补充说明（可选）</div>
+        <el-input v-model="config.custom_instructions" type="textarea" :rows="3"
+          placeholder="如：重点关注支付流程、用例需包含并发场景..." />
+      </div>
       </div>
 
       <!-- 右：需求点预览 -->
@@ -147,7 +145,6 @@ const modelConfigs = ref<AIModelConfig[]>([])
 const generating = ref(false)
 const lastResult = ref<any>(null)
 const reqPoints = ref<RequirementPoint[]>([])
-const advancedPanels = ref<string[]>([])
 
 const config = reactive({
   requirement_id: undefined as number | undefined,
@@ -344,8 +341,10 @@ function providerName(p: string): string {
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 
 .generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
+.left-column { min-height: 0; min-width: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; overflow: hidden; }
 .config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
 .config-body, .preview-body { flex: 1; min-height: 0; overflow: auto; overflow-x: hidden; padding-right: 2px; }
+.advanced-panel { flex-shrink: 0; }
 .config-footer {
   border-top: 1px solid var(--border);
   padding-top: 12px;
@@ -381,7 +380,6 @@ function providerName(p: string): string {
 
 .req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
 .summary-title { margin-top: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.advanced-collapse { margin-top: 14px; }
 
 .result-summary { margin-top: 10px; border: 1px solid #dbeafe; background: #f8fbff; border-radius: 8px; padding: 8px 10px; }
 .result-line { font-size: 13px; font-weight: 600; color: #1f2937; }
@@ -405,6 +403,7 @@ function providerName(p: string): string {
 :deep(.mindmap-tree .el-tree-node__children) { padding-left: 18px; }
 @media (max-width: 1024px) {
   .generate-layout { grid-template-columns: 1fr; gap: 12px; }
+  .left-column { grid-template-rows: auto auto; }
   .config-panel, .preview-panel { min-height: 300px; }
 }
 @media (max-width: 768px) {
