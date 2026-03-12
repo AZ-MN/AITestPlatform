@@ -31,12 +31,22 @@
           <span>最大Token：{{ cfg.max_tokens }}</span>
           <span>状态：{{ cfg.is_active ? '启用' : '禁用' }}</span>
         </div>
-        <div class="model-actions">
-          <el-button size="small" :loading="testingId === cfg.id" @click="testModel(cfg)">
-            连通性测试
-          </el-button>
-          <el-button size="small" @click="editConfig(cfg)">编辑</el-button>
-          <el-button size="small" type="danger" plain @click="removeConfig(cfg)">删除</el-button>
+        <div class="model-actions" @click.stop>
+          <el-tooltip content="连通性测试" placement="top">
+            <el-button circle text :loading="testingId === cfg.id" @click="testModel(cfg)">
+              <el-icon v-if="testingId !== cfg.id"><Promotion /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="编辑模型" placement="top">
+            <el-button circle text @click="editConfig(cfg)">
+              <el-icon><Edit /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="删除模型" placement="top">
+            <el-button circle text type="danger" @click="removeConfig(cfg)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </el-tooltip>
         </div>
         <div v-if="testResults[cfg.id]" :class="['test-result', testResults[cfg.id].ok ? 'ok' : 'fail']">
           <span v-if="testResults[cfg.id].ok">✅ {{ testResults[cfg.id].reply }}</span>
@@ -106,7 +116,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Promotion } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { modelApi } from '@/api/models'
 import type { AIModelConfig } from '@/api/types'
@@ -219,12 +229,12 @@ async function removeConfig(cfg: AIModelConfig) {
 
 .model-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 280px));
+  grid-template-columns: repeat(auto-fill, minmax(296px, 296px));
   justify-content: flex-start;
   align-items: start;
-  gap: 14px;
+  gap: 16px;
 }
-.model-card { display: flex; flex-direction: column; gap: 8px; min-height: 158px; }
+.model-card { display: flex; flex-direction: column; gap: 10px; min-height: 172px; }
 .model-card-header { display: flex; align-items: center; gap: 10px; }
 .provider-badge {
   width: 40px; height: 40px; border-radius: 10px;
@@ -233,8 +243,9 @@ async function removeConfig(cfg: AIModelConfig) {
 }
 .model-name { font-size: 14px; font-weight: 600; }
 .provider-name { font-size: 12px; color: var(--text-secondary); }
-.model-meta { display: flex; gap: 10px; font-size: 12px; color: #9ca3af; flex-wrap: wrap; }
-.model-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.model-meta { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; flex-wrap: wrap; }
+.model-actions { display: flex; gap: 4px; margin-top: 2px; }
+.model-actions :deep(.el-button) { width: 28px; height: 28px; }
 .test-result { font-size: 12px; padding: 6px 8px; border-radius: 6px; }
 .test-result.ok { background: #ecfdf5; color: #059669; }
 .test-result.fail { background: #fef2f2; color: #dc2626; }
@@ -242,7 +253,7 @@ async function removeConfig(cfg: AIModelConfig) {
 .add-model-card {
   border: 2px dashed var(--border); border-radius: 12px; padding: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 158px;
+  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 172px;
   transition: all .2s; font-size: 14px;
 }
 .add-model-card:hover { border-color: #4f6ef7; color: #4f6ef7; }

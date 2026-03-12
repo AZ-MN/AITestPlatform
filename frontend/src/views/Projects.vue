@@ -261,10 +261,10 @@ async function deleteProject(p: Project) {
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 280px));
+  grid-template-columns: repeat(auto-fill, minmax(296px, 296px));
   justify-content: flex-start;
   align-items: start;
-  gap: 14px;
+  gap: 16px;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -274,12 +274,12 @@ async function deleteProject(p: Project) {
   background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
   border: 1px solid #e5e7eb;
   border-radius: 14px;
-  padding: 14px;
+  padding: 16px;
   transition: all .2s;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  min-height: 168px;
+  min-height: 180px;
 }
 .project-card::before {
   content: '';
@@ -295,7 +295,7 @@ async function deleteProject(p: Project) {
 .project-card:hover::before { opacity: 1; }
 .project-card:hover { border-color: #c7d2fe; box-shadow: 0 8px 20px rgba(79,110,247,.12); transform: translateY(-2px); }
 .project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
-.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .main-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .top-right { display: flex; align-items: center; gap: 8px; }
 .card-icons { display: flex; align-items: center; opacity: .55; transition: opacity .2s; }
@@ -318,8 +318,8 @@ async function deleteProject(p: Project) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.p-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.p-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .stat-pill {
   font-size: 12px;
   color: #4b5563;
@@ -341,7 +341,7 @@ async function deleteProject(p: Project) {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 2px dashed var(--border);
   border-radius: 14px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -349,7 +349,7 @@ async function deleteProject(p: Project) {
   gap: 8px;
   cursor: pointer;
   color: #9ca3af;
-  min-height: 168px;
+  min-height: 180px;
   transition: all .2s;
   font-size: 14px;
 }
