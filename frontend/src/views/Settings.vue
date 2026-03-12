@@ -24,7 +24,7 @@
             <el-tooltip :content="cfg.model_name" placement="top">
               <div class="model-name">{{ cfg.model_name }}</div>
             </el-tooltip>
-            <div class="provider-name">{{ providerLabel(cfg.provider) }}</div>
+            <div class="provider-name">{{ providerLabel(cfg.provider) }} · 用例生成模型</div>
           </div>
           <div class="model-header-right" @click.stop>
             <el-tag v-if="cfg.is_default" type="success" size="small">默认</el-tag>
@@ -48,13 +48,15 @@
           </div>
         </div>
         <div class="model-meta">
-          <div class="meta-item"><span>温度</span><strong>{{ cfg.temperature }}</strong></div>
-          <div class="meta-item"><span>最大令牌</span><strong>{{ cfg.max_tokens }}</strong></div>
-          <div class="meta-item"><span>状态</span><strong>{{ cfg.is_active ? '启用' : '禁用' }}</strong></div>
-        </div>
-        <div v-if="testResults[cfg.id]" :class="['test-result', testResults[cfg.id].ok ? 'ok' : 'fail']">
-          <span v-if="testResults[cfg.id].ok">✅ 连通成功：{{ testResults[cfg.id].reply }}</span>
-          <span v-else>❌ 连通失败：{{ testResults[cfg.id].error }}</span>
+          <el-tooltip content="温度参数" placement="top">
+            <div class="meta-item"><em>🌡️</em><strong>{{ cfg.temperature }}</strong></div>
+          </el-tooltip>
+          <el-tooltip content="最大令牌数" placement="top">
+            <div class="meta-item"><em>🧾</em><strong>{{ cfg.max_tokens }}</strong></div>
+          </el-tooltip>
+          <el-tooltip content="模型状态" placement="top">
+            <div class="meta-item"><em>⚙️</em><strong>{{ cfg.is_active ? '启用' : '禁用' }}</strong></div>
+          </el-tooltip>
         </div>
       </div>
 
@@ -131,7 +133,6 @@ const showDialog = ref(false)
 const saving = ref(false)
 const editId = ref<number>()
 const testingId = ref<number>()
-const testResults = ref<Record<number, any>>({})
 const formRef = ref()
 
 const form = reactive({
@@ -208,10 +209,13 @@ async function handleSave() {
 
 async function testModel(cfg: AIModelConfig) {
   testingId.value = cfg.id
-  testResults.value[cfg.id] = null
-  const res = await modelApi.test(cfg.id)
-  testResults.value[cfg.id] = res
-  testingId.value = undefined
+  try {
+    const res = await modelApi.test(cfg.id)
+    if (res?.ok) ElMessage.success(`模型连通成功：${cfg.model_name}`)
+    else ElMessage.error(`模型连通失败：${res?.error || '请检查配置'}`)
+  } finally {
+    testingId.value = undefined
+  }
 }
 
 async function removeConfig(cfg: AIModelConfig) {
@@ -233,12 +237,12 @@ async function removeConfig(cfg: AIModelConfig) {
 
 .model-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(296px, 296px));
+  grid-template-columns: repeat(auto-fill, minmax(312px, 312px));
   justify-content: flex-start;
   align-items: start;
-  gap: 18px;
+  gap: 16px;
 }
-.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 184px; border-radius: 14px; position: relative; overflow: hidden; }
+.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 176px; border-radius: 16px; position: relative; overflow: hidden; }
 .model-card { background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%); border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
 .model-card::before {
   content: '';
@@ -257,24 +261,22 @@ async function removeConfig(cfg: AIModelConfig) {
   font-size: 20px; flex-shrink: 0;
 }
 .model-main { min-width: 0; flex: 1; padding-right: 8px; }
-.model-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.model-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 188px; }
 .provider-name { font-size: 12px; color: var(--text-secondary); }
 .model-header-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .model-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.meta-item { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
-.meta-item span { font-size: 11px; color: #6b7280; }
-.meta-item strong { font-size: 13px; color: #111827; font-weight: 600; }
-.model-actions { display: flex; flex-direction: column; gap: 2px; }
+.meta-item { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 7px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: help; }
+.meta-item em { font-style: normal; opacity: .95; }
+.meta-item strong { font-size: 13px; color: #111827; font-weight: 600; line-height: 1.2; }
+.model-actions { display: flex; flex-direction: column; gap: 2px; opacity: 0; transform: translateY(-2px); pointer-events: none; transition: opacity .2s, transform .2s; }
+.model-card:hover .model-actions, .model-card:focus-within .model-actions { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .model-actions :deep(.el-button) { width: 28px; height: 28px; }
 .model-actions :deep(.el-button:hover) { background: #eef2ff; color: #4f6ef7; }
-.test-result { font-size: 12px; padding: 6px 8px; border-radius: 6px; }
-.test-result.ok { background: #ecfdf5; color: #059669; }
-.test-result.fail { background: #fef2f2; color: #dc2626; }
 
 .add-model-card {
   border: 2px dashed var(--border); border-radius: 14px; padding: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 184px;
+  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 176px;
   transition: all .2s; font-size: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
 }

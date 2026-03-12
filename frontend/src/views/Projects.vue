@@ -46,7 +46,7 @@
                   <el-icon><Edit /></el-icon>
                 </el-button>
               </el-tooltip>
-              <el-tooltip :content="p.status === 'archived' ? '取消归档' : '归档项目'" placement="top">
+              <el-tooltip :content="p.status === 'archived' ? '取消归档项目' : '归档项目'" placement="top">
                 <el-button text circle type="warning" @click.stop="p.status === 'archived' ? unarchiveProject(p) : archiveProject(p)">
                   <el-icon><RefreshLeft v-if="p.status === 'archived'" /><FolderRemove v-else /></el-icon>
                 </el-button>
@@ -61,9 +61,15 @@
         </div>
         <div class="p-desc">{{ p.description || '暂无项目描述，点击进入后可补充。' }}</div>
         <div class="p-stats">
-          <span class="stat-pill"><em>📄</em><strong>{{ p.req_count }}</strong></span>
-          <span class="stat-pill"><em>🧪</em><strong>{{ p.case_count }}</strong></span>
-          <span class="stat-pill"><em>👥</em><strong>{{ p.member_count }}</strong></span>
+          <el-tooltip content="需求数量" placement="top">
+            <span class="stat-pill"><em>📄</em><strong>{{ p.req_count }}</strong></span>
+          </el-tooltip>
+          <el-tooltip content="用例数量" placement="top">
+            <span class="stat-pill"><em>🧪</em><strong>{{ p.case_count }}</strong></span>
+          </el-tooltip>
+          <el-tooltip content="成员数量" placement="top">
+            <span class="stat-pill"><em>👥</em><strong>{{ p.member_count }}</strong></span>
+          </el-tooltip>
         </div>
       </div>
 
@@ -260,10 +266,10 @@ async function deleteProject(p: Project) {
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(304px, 304px));
+  grid-template-columns: repeat(auto-fill, minmax(312px, 312px));
   justify-content: flex-start;
   align-items: start;
-  gap: 18px;
+  gap: 16px;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -273,12 +279,12 @@ async function deleteProject(p: Project) {
   background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 16px;
+  padding: 14px;
   transition: all .2s;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  min-height: 188px;
+  min-height: 176px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 .project-card::before {
@@ -295,11 +301,12 @@ async function deleteProject(p: Project) {
 .project-card:hover::before { opacity: 1; }
 .project-card:hover { border-color: #c7d2fe; box-shadow: 0 8px 20px rgba(79,110,247,.12); transform: translateY(-2px); }
 .project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
-.card-top { position: relative; margin-bottom: 10px; min-height: 64px; }
+.card-top { position: relative; margin-bottom: 10px; min-height: 58px; }
 .main-info { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 46px; }
 .top-right { position: absolute; right: 0; top: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.card-icons { display: flex; flex-direction: column; align-items: center; opacity: .55; transition: opacity .2s; }
+.card-icons { display: flex; flex-direction: column; align-items: center; opacity: 0; transform: translateY(-2px); pointer-events: none; transition: opacity .2s, transform .2s; }
 .project-card:hover .card-icons, .project-card:focus-within .card-icons { opacity: 1; }
+.project-card:hover .card-icons, .project-card:focus-within .card-icons { transform: translateY(0); pointer-events: auto; }
 .p-icon {
   font-size: 24px;
   flex-shrink: 0;
@@ -317,9 +324,9 @@ async function deleteProject(p: Project) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
+  max-width: 190px;
 }
-.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; }
 .p-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
 .stat-pill {
   background: #f8fafc;
@@ -330,6 +337,7 @@ async function deleteProject(p: Project) {
   justify-content: center;
   align-items: center;
   gap: 6px;
+  cursor: help;
 }
 .stat-pill em { font-style: normal; opacity: .95; }
 .stat-pill strong { font-size: 14px; color: #111827; line-height: 1.2; }
@@ -341,7 +349,7 @@ async function deleteProject(p: Project) {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 2px dashed var(--border);
   border-radius: 16px;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -349,7 +357,7 @@ async function deleteProject(p: Project) {
   gap: 8px;
   cursor: pointer;
   color: #9ca3af;
-  min-height: 188px;
+  min-height: 176px;
   transition: all .2s;
   font-size: 14px;
 }
