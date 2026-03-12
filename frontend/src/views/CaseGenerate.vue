@@ -117,16 +117,25 @@
           <div v-if="!filteredPoints.length" class="preview-empty">
             <p>{{ requirements.length ? '请先在左侧选择需求来源' : '当前项目还没有需求，请先在需求管理中录入需求' }}</p>
           </div>
-          <div v-else class="preview-list">
-            <div v-for="(p, i) in filteredPoints" :key="i" class="req-point">
-              <div class="rp-header">
-                <span class="rp-id">{{ p.id }}</span>
-                <el-tag :class="`tag-${p.priority?.toLowerCase()}`" size="small">{{ p.priority }}</el-tag>
-                <span class="rp-module">{{ p.module }}</span>
+          <el-tree
+            v-else
+            :data="mindmapData"
+            node-key="id"
+            default-expand-all
+            :expand-on-click-node="false"
+            class="mindmap-tree"
+          >
+            <template #default="{ data }">
+              <div :class="['mind-node', `kind-${data.kind}`]">
+                <div class="mind-line">
+                  <span class="node-label">{{ data.label }}</span>
+                  <el-tag v-if="data.priority" :class="`tag-${String(data.priority).toLowerCase()}`" size="small">{{ data.priority }}</el-tag>
+                  <span v-if="data.kind === 'module'" class="node-count">{{ data.count }}项</span>
+                </div>
+                <div v-if="data.description" class="node-desc">{{ data.description }}</div>
               </div>
-              <div class="rp-title">{{ p.title }}</div>
-            </div>
-          </div>
+            </template>
+          </el-tree>
         </div>
       </div>
     </div>
@@ -173,6 +182,32 @@ const modules = computed(() => {
 const filteredPoints = computed(() => {
   if (!config.module_filter) return reqPoints.value
   return reqPoints.value.filter(p => p.module === config.module_filter)
+})
+const mindmapData = computed(() => {
+  const moduleMap = new Map<string, RequirementPoint[]>()
+  for (const p of filteredPoints.value) {
+    const key = p.module || '通用模块'
+    if (!moduleMap.has(key)) moduleMap.set(key, [])
+    moduleMap.get(key)!.push(p)
+  }
+  return [{
+    id: `root-${config.requirement_id || 'none'}`,
+    kind: 'root',
+    label: selectedReqTitle.value || '需求点总览',
+    children: [...moduleMap.entries()].map(([module, points], idx) => ({
+      id: `module-${idx}-${module}`,
+      kind: 'module',
+      label: module,
+      count: points.length,
+      children: points.map((point, pIdx) => ({
+        id: `point-${idx}-${pIdx}-${point.id || pIdx}`,
+        kind: 'point',
+        label: point.title || point.id || `需求点${pIdx + 1}`,
+        priority: point.priority,
+        description: point.description || '',
+      })),
+    })),
+  }]
 })
 
 const tempMarks = { 0: '严谨', 0.5: '均衡', 1: '发散' }
@@ -327,9 +362,9 @@ function providerName(p: string): string {
   color: #4b5563;
 }
 
-.generate-layout { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
-.config-panel, .preview-panel { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.config-body, .preview-body { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; }
+.generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
+.config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
+.config-body, .preview-body { flex: 1; min-height: 0; overflow: auto; overflow-x: hidden; padding-right: 2px; }
 .config-footer {
   border-top: 1px solid var(--border);
   padding-top: 12px;
@@ -362,17 +397,22 @@ function providerName(p: string): string {
 .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .preview-count { font-size: 13px; color: var(--text-secondary); }
 .preview-empty { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
-.preview-list { display: flex; flex-direction: column; gap: 8px; }
-
-.req-point { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
-.rp-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.rp-id { font-size: 11px; font-family: monospace; color: #9ca3af; }
-.rp-module { font-size: 11px; color: #9ca3af; }
-.rp-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
+.mindmap-tree { background: transparent; }
+.mind-node { min-width: 0; width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; background: #fff; }
+.mind-node.kind-root { background: #eef2ff; border-color: #c7d2fe; }
+.mind-node.kind-module { background: #f8fafc; }
+.mind-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.node-label { font-size: 13px; font-weight: 500; color: #111827; line-height: 1.4; white-space: normal; word-break: break-word; }
+.node-count { margin-left: auto; font-size: 11px; color: #6b7280; }
+.node-desc { margin-top: 4px; font-size: 12px; color: #6b7280; line-height: 1.4; white-space: normal; word-break: break-word; }
+:deep(.mindmap-tree .el-tree-node__content) { height: auto; align-items: flex-start; padding: 4px 0; }
+:deep(.mindmap-tree .el-tree-node) { min-width: 0; }
+:deep(.mindmap-tree .el-tree-node__children) { padding-left: 18px; }
 @media (max-width: 1024px) {
-  .generate-layout { grid-template-columns: 1fr; grid-template-rows: minmax(320px, 1fr) minmax(260px, 1fr); }
+  .generate-layout { grid-template-columns: 1fr; grid-template-rows: minmax(340px, 1fr) minmax(260px, 1fr); }
 }
 @media (max-width: 768px) {
   .page-header { flex-direction: column; align-items: flex-start; }
+  .quick-bar { gap: 6px; }
 }
 </style>
