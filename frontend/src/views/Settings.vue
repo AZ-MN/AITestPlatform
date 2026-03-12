@@ -20,37 +20,39 @@
           <div class="provider-badge" :style="{ background: providerColor(cfg.provider) }">
             {{ providerIcon(cfg.provider) }}
           </div>
-          <div>
+          <div class="model-main">
             <div class="model-name">{{ cfg.model_name }}</div>
             <div class="provider-name">{{ providerLabel(cfg.provider) }}</div>
           </div>
-          <el-tag v-if="cfg.is_default" type="success" size="small" style="margin-left:auto">默认</el-tag>
+          <div class="model-header-right" @click.stop>
+            <el-tag v-if="cfg.is_default" type="success" size="small">默认</el-tag>
+            <div class="model-actions">
+              <el-tooltip content="连通性测试" placement="top">
+                <el-button circle text :loading="testingId === cfg.id" @click="testModel(cfg)">
+                  <el-icon v-if="testingId !== cfg.id"><Promotion /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="编辑模型" placement="top">
+                <el-button circle text @click="editConfig(cfg)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+              </el-tooltip>
+              <el-tooltip content="删除模型" placement="top">
+                <el-button circle text type="danger" @click="removeConfig(cfg)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </el-tooltip>
+            </div>
+          </div>
         </div>
         <div class="model-meta">
-          <span>温度：{{ cfg.temperature }}</span>
-          <span>最大Token：{{ cfg.max_tokens }}</span>
-          <span>状态：{{ cfg.is_active ? '启用' : '禁用' }}</span>
-        </div>
-        <div class="model-actions" @click.stop>
-          <el-tooltip content="连通性测试" placement="top">
-            <el-button circle text :loading="testingId === cfg.id" @click="testModel(cfg)">
-              <el-icon v-if="testingId !== cfg.id"><Promotion /></el-icon>
-            </el-button>
-          </el-tooltip>
-          <el-tooltip content="编辑模型" placement="top">
-            <el-button circle text @click="editConfig(cfg)">
-              <el-icon><Edit /></el-icon>
-            </el-button>
-          </el-tooltip>
-          <el-tooltip content="删除模型" placement="top">
-            <el-button circle text type="danger" @click="removeConfig(cfg)">
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </el-tooltip>
+          <div class="meta-item"><span>温度</span><strong>{{ cfg.temperature }}</strong></div>
+          <div class="meta-item"><span>最大令牌</span><strong>{{ cfg.max_tokens }}</strong></div>
+          <div class="meta-item"><span>状态</span><strong>{{ cfg.is_active ? '启用' : '禁用' }}</strong></div>
         </div>
         <div v-if="testResults[cfg.id]" :class="['test-result', testResults[cfg.id].ok ? 'ok' : 'fail']">
-          <span v-if="testResults[cfg.id].ok">✅ {{ testResults[cfg.id].reply }}</span>
-          <span v-else>❌ {{ testResults[cfg.id].error }}</span>
+          <span v-if="testResults[cfg.id].ok">✅ 连通成功：{{ testResults[cfg.id].reply }}</span>
+          <span v-else>❌ 连通失败：{{ testResults[cfg.id].error }}</span>
         </div>
       </div>
 
@@ -232,19 +234,24 @@ async function removeConfig(cfg: AIModelConfig) {
   grid-template-columns: repeat(auto-fill, minmax(296px, 296px));
   justify-content: flex-start;
   align-items: start;
-  gap: 16px;
+  gap: 18px;
 }
-.model-card { display: flex; flex-direction: column; gap: 10px; min-height: 172px; }
+.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 184px; border-radius: 14px; }
 .model-card-header { display: flex; align-items: center; gap: 10px; }
 .provider-badge {
   width: 40px; height: 40px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; flex-shrink: 0;
 }
+.model-main { min-width: 0; flex: 1; }
 .model-name { font-size: 14px; font-weight: 600; }
 .provider-name { font-size: 12px; color: var(--text-secondary); }
-.model-meta { display: flex; gap: 12px; font-size: 12px; color: #9ca3af; flex-wrap: wrap; }
-.model-actions { display: flex; gap: 4px; margin-top: 2px; }
+.model-header-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.model-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.meta-item { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.meta-item span { font-size: 11px; color: #6b7280; }
+.meta-item strong { font-size: 13px; color: #111827; font-weight: 600; }
+.model-actions { display: flex; gap: 2px; }
 .model-actions :deep(.el-button) { width: 28px; height: 28px; }
 .test-result { font-size: 12px; padding: 6px 8px; border-radius: 6px; }
 .test-result.ok { background: #ecfdf5; color: #059669; }
@@ -253,7 +260,7 @@ async function removeConfig(cfg: AIModelConfig) {
 .add-model-card {
   border: 2px dashed var(--border); border-radius: 12px; padding: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 172px;
+  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 184px;
   transition: all .2s; font-size: 14px;
 }
 .add-model-card:hover { border-color: #4f6ef7; color: #4f6ef7; }

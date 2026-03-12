@@ -65,7 +65,7 @@
           <span class="stat-pill"><em>📋</em>{{ p.case_count }} 用例</span>
           <span class="stat-pill"><em>👥</em>{{ p.member_count }} 成员</span>
         </div>
-        <div class="card-hint">点击任意区域进入项目</div>
+        <div class="card-hint">进入项目 →</div>
       </div>
 
       <div class="add-card" @click="showCreate = true">
@@ -261,10 +261,10 @@ async function deleteProject(p: Project) {
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(296px, 296px));
+  grid-template-columns: repeat(auto-fill, minmax(304px, 304px));
   justify-content: flex-start;
   align-items: start;
-  gap: 16px;
+  gap: 18px;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -273,13 +273,14 @@ async function deleteProject(p: Project) {
 .project-card {
   background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 16px;
   transition: all .2s;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  min-height: 180px;
+  min-height: 188px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 .project-card::before {
   content: '';
@@ -332,7 +333,7 @@ async function deleteProject(p: Project) {
   gap: 4px;
 }
 .stat-pill em { font-style: normal; opacity: .9; }
-.card-hint { font-size: 12px; color: #9ca3af; }
+.card-hint { font-size: 12px; color: #4f6ef7; font-weight: 500; }
 .status-tag { border-radius: 999px; font-weight: 600; }
 :deep(.card-icons .el-button + .el-button) { margin-left: 0; }
 :deep(.card-icons .el-button.is-text) { width: 26px; height: 26px; }
@@ -340,7 +341,7 @@ async function deleteProject(p: Project) {
 .add-card {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 2px dashed var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -349,7 +350,7 @@ async function deleteProject(p: Project) {
   gap: 8px;
   cursor: pointer;
   color: #9ca3af;
-  min-height: 180px;
+  min-height: 188px;
   transition: all .2s;
   font-size: 14px;
 }
