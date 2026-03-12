@@ -24,6 +24,7 @@
           <el-button size="small" type="primary" @click="openProject(p)">进入项目</el-button>
           <el-button size="small" @click="editProject(p)">编辑</el-button>
           <el-button size="small" type="danger" plain @click="archiveProject(p)">归档</el-button>
+          <el-button size="small" type="danger" @click="deleteProject(p)">删除</el-button>
         </div>
       </div>
 
@@ -116,18 +117,30 @@ async function handleSave() {
 
 async function archiveProject(p: Project) {
   await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', { type: 'warning' })
-  await projectApi.remove(p.id)
+  await projectApi.archive(p.id)
   ElMessage.success('已归档')
-  projectStore.fetchProjects()
+  await projectStore.fetchProjects()
+}
+
+async function deleteProject(p: Project) {
+  await ElMessageBox.confirm(
+    `确认永久删除项目「${p.name}」？该操作将同时删除其需求和测试用例，且不可恢复。`,
+    '删除确认',
+    { type: 'error', confirmButtonText: '确认删除', cancelButtonText: '取消' }
+  )
+  await projectApi.remove(p.id)
+  if (projectStore.current?.id === p.id) projectStore.current = null
+  ElMessage.success('项目已删除')
+  await projectStore.fetchProjects()
 }
 </script>
 
 <style scoped>
-.projects-page { max-width: 1200px; }
+.projects-page { width: 100%; max-width: none; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .page-header h2 { font-size: 22px; font-weight: 700; }
 
-.project-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .project-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -173,4 +186,10 @@ async function archiveProject(p: Project) {
 }
 .icon-opt.active { border-color: #4f6ef7; background: var(--primary-light); }
 .icon-opt:hover { border-color: #4f6ef7; }
+
+@media (max-width: 768px) {
+  .card-actions {
+    flex-wrap: wrap;
+  }
+}
 </style>

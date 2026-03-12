@@ -86,7 +86,7 @@ async def update_project(
     return _enrich_project(proj, db)
 
 
-@router.delete("/{project_id}", summary="删除/归档项目")
+@router.delete("/{project_id}", summary="删除项目")
 async def delete_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
@@ -95,6 +95,29 @@ async def delete_project(
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         raise HTTPException(status_code=404, detail="项目不存在")
+    if current_user.role != "super_admin" and proj.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="仅项目创建者或系统管理员可删除项目")
+
+    # 先清理关联数据，避免外键约束导致删除失败
+    db.query(TestCase).filter(TestCase.project_id == project_id).delete(synchronize_session=False)
+    db.query(Requirement).filter(Requirement.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
+    db.delete(proj)
+    db.commit()
+    return {"message": "项目已删除"}
+
+
+@router.patch("/{project_id}/archive", summary="归档项目")
+async def archive_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    if current_user.role != "super_admin" and proj.created_by != current_user.id:
+        raise HTTPException(status_code=403, detail="仅项目创建者或系统管理员可归档项目")
     proj.status = "archived"
     db.commit()
     return {"message": "项目已归档"}

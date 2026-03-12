@@ -192,7 +192,7 @@ async function handleCommand(cmd: string) {
 }
 .collapse-btn:hover { color: #fff; }
 
-.main-container { overflow: hidden; }
+.main-container { overflow: hidden; min-width: 0; }
 
 .app-header {
   height: 56px;
@@ -215,5 +215,27 @@ async function handleCommand(cmd: string) {
   background: var(--bg);
   overflow-y: auto;
   padding: 20px 24px;
+}
+
+.app-main :deep(.dashboard),
+.app-main :deep(.projects-page),
+.app-main :deep(.req-page),
+.app-main :deep(.generate-page),
+.app-main :deep(.case-library),
+.app-main :deep(.settings-page),
+.app-main :deep(.profile-page) {
+  width: 100%;
+  max-width: none !important;
+}
+
+@media (max-width: 1200px) {
+  .app-header { padding: 0 16px; }
+  .app-main { padding: 16px; }
+}
+
+@media (max-width: 768px) {
+  .app-header { padding: 0 12px; }
+  .app-main { padding: 12px; }
+  .username { display: none; }
 }
 </style>
