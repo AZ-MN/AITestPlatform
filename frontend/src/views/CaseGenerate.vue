@@ -11,7 +11,14 @@
       <div class="left-column">
       <!-- 左：主流程配置 -->
       <div class="config-panel page-card">
-        <h3>生成流程配置</h3>
+        <div class="panel-title-row">
+          <h3>生成流程配置</h3>
+          <el-tooltip content="高级参数配置" placement="top">
+            <el-button class="advanced-icon-btn" circle @click="advancedDialogVisible = true">
+              <el-icon><Setting /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
         <div class="config-body">
           <el-alert
             v-if="!modelConfigs.length"
@@ -29,15 +36,11 @@
             <el-option v-if="!modelConfigs.length" value="" label="（请先在设置中添加AI模型）" disabled />
           </el-select>
 
-          <div class="section-label"><span class="sec-index">2</span>选择需求来源</div>
+          <div class="section-label"><span class="sec-index">2</span>选择需求来源（单选）</div>
           <el-select v-model="config.requirement_id" placeholder="选择已解析的需求" clearable style="width:100%"
             @change="onReqChange">
             <el-option v-for="r in requirements" :key="r.id" :label="r.title" :value="r.id" />
           </el-select>
-
-          <div v-if="reqPoints.length" class="req-summary">
-            <div class="summary-title">{{ selectedReqTitle }}</div>
-          </div>
 
           <div class="section-label"><span class="sec-index">3</span>选择覆盖模块（可选）</div>
           <el-select v-model="config.module_filter" placeholder="全部模块" clearable style="width:100%">
@@ -84,14 +87,14 @@
           </div>
         </div>
       </div>
-      <div class="advanced-panel page-card">
-        <h3>高级参数（隔离配置）</h3>
+
+      <el-dialog v-model="advancedDialogVisible" title="高级参数（隔离配置）" width="520px">
         <div class="section-label small">创造性（Temperature）<span class="temp-val">{{ config.temperature }}</span></div>
         <el-slider v-model="config.temperature" :min="0" :max="1" :step="0.1" :marks="tempMarks" />
         <div class="section-label small">补充说明（可选）</div>
-        <el-input v-model="config.custom_instructions" type="textarea" :rows="3"
+        <el-input v-model="config.custom_instructions" type="textarea" :rows="4"
           placeholder="如：重点关注支付流程、用例需包含并发场景..." />
-      </div>
+      </el-dialog>
       </div>
 
       <!-- 右：需求点预览 -->
@@ -145,6 +148,7 @@ const modelConfigs = ref<AIModelConfig[]>([])
 const generating = ref(false)
 const lastResult = ref<any>(null)
 const reqPoints = ref<RequirementPoint[]>([])
+const advancedDialogVisible = ref(false)
 
 const config = reactive({
   requirement_id: undefined as number | undefined,
@@ -341,10 +345,9 @@ function providerName(p: string): string {
 .sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
 
 .generate-layout { display: grid; grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); gap: 20px; align-items: stretch; flex: 1; min-height: 0; }
-.left-column { min-height: 0; min-width: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; overflow: hidden; }
+.left-column { min-height: 0; min-width: 0; overflow: hidden; }
 .config-panel, .preview-panel { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
 .config-body, .preview-body { flex: 1; min-height: 0; overflow: auto; overflow-x: hidden; padding-right: 2px; }
-.advanced-panel { flex-shrink: 0; }
 .config-footer {
   border-top: 1px solid var(--border);
   padding-top: 12px;
@@ -352,7 +355,9 @@ function providerName(p: string): string {
   flex-shrink: 0;
 }
 
-.config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.config-panel h3, .preview-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 0; }
+.advanced-icon-btn { width: 30px; height: 30px; }
 .section-label {
   font-size: 13px; font-weight: 500; color: var(--text-secondary);
   margin: 16px 0 8px;
@@ -378,9 +383,6 @@ function providerName(p: string): string {
 
 .scenario-group { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 
-.req-summary { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 8px; }
-.summary-title { margin-top: 6px; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 .result-summary { margin-top: 10px; border: 1px solid #dbeafe; background: #f8fbff; border-radius: 8px; padding: 8px 10px; }
 .result-line { font-size: 13px; font-weight: 600; color: #1f2937; }
 .footer-actions { display: flex; gap: 8px; }
@@ -403,7 +405,6 @@ function providerName(p: string): string {
 :deep(.mindmap-tree .el-tree-node__children) { padding-left: 18px; }
 @media (max-width: 1024px) {
   .generate-layout { grid-template-columns: 1fr; gap: 12px; }
-  .left-column { grid-template-rows: auto auto; }
   .config-panel, .preview-panel { min-height: 300px; }
 }
 @media (max-width: 768px) {
