@@ -1,8 +1,14 @@
 <template>
   <div class="dashboard">
     <div class="page-title">
-      <h2>仪表盘</h2>
-      <span class="subtitle">欢迎回来，{{ auth.user?.full_name }} 👋</span>
+      <div>
+        <h2>仪表盘</h2>
+        <span class="subtitle">欢迎回来，{{ auth.user?.full_name }} 👋</span>
+      </div>
+      <div class="title-actions">
+        <el-button @click="$router.push('/projects')">项目管理</el-button>
+        <el-button type="primary" @click="goGenerate">开始生成</el-button>
+      </div>
     </div>
 
     <!-- 统计卡片 -->
@@ -12,7 +18,26 @@
         <div>
           <div class="stat-value">{{ stat.value }}</div>
           <div class="stat-label">{{ stat.label }}</div>
+          <div class="stat-sub">{{ stat.hint }}</div>
         </div>
+      </div>
+    </div>
+
+    <div class="status-board section">
+      <div class="status-item">
+        <div class="status-title">项目活跃率</div>
+        <div class="status-value">{{ activeRate }}%</div>
+        <el-progress :percentage="activeRate" :stroke-width="8" :show-text="false" />
+      </div>
+      <div class="status-item">
+        <div class="status-title">平均用例密度</div>
+        <div class="status-value">{{ avgCasesPerProject }}</div>
+        <div class="status-desc">每个项目平均用例数</div>
+      </div>
+      <div class="status-item">
+        <div class="status-title">生成能力状态</div>
+        <div class="status-value">{{ modelCount > 0 ? 'AI + 规则' : '规则引擎' }}</div>
+        <div class="status-desc">{{ modelCount > 0 ? `默认模型：${defaultModelName}` : '建议在模型设置中补充 AI 配置' }}</div>
       </div>
     </div>
 
@@ -30,9 +55,9 @@
             <div class="p-name">{{ p.name }}</div>
             <div class="p-desc">{{ p.description || '暂无描述' }}</div>
             <div class="p-meta">
-              <span>📋 {{ p.case_count }} 用例</span>
-              <span>📄 {{ p.req_count }} 需求</span>
-              <span>👥 {{ p.member_count }} 成员</span>
+              <span class="meta-pill">📄 {{ p.req_count }} 需求</span>
+              <span class="meta-pill">📋 {{ p.case_count }} 用例</span>
+              <span class="meta-pill">👥 {{ p.member_count }} 成员</span>
             </div>
           </div>
           <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small">
@@ -107,11 +132,27 @@ const recentProjects = computed(() =>
 )
 
 const stats = computed(() => [
-  { label: '项目总数', value: projectStore.projects.length, icon: '📁', bg: '#eef0fe' },
-  { label: '需求总数', value: totalReqs.value, icon: '📄', bg: '#fef3e2' },
-  { label: '用例总数', value: totalCases.value, icon: '📋', bg: '#e8f5e9' },
-  { label: '活跃项目', value: recentProjects.value.length, icon: '🚀', bg: '#fce4ec' },
+  { label: '项目总数', value: projectStore.projects.length, icon: '📁', bg: '#eef0fe', hint: `含归档 ${archivedCount.value}` },
+  { label: '需求总数', value: totalReqs.value, icon: '📄', bg: '#fef3e2', hint: `平均每项目 ${avgReqsPerProject.value}` },
+  { label: '用例总数', value: totalCases.value, icon: '📋', bg: '#e8f5e9', hint: `平均每项目 ${avgCasesPerProject.value}` },
+  { label: '活跃项目', value: recentProjects.value.length, icon: '🚀', bg: '#fce4ec', hint: `活跃率 ${activeRate.value}%` },
 ])
+const archivedCount = computed(() => projectStore.projects.filter(p => p.status === 'archived').length)
+const activeRate = computed(() => {
+  const total = projectStore.projects.length
+  if (!total) return 0
+  return Math.round((recentProjects.value.length / total) * 100)
+})
+const avgCasesPerProject = computed(() => {
+  const total = projectStore.projects.length
+  if (!total) return 0
+  return Math.round(totalCases.value / total)
+})
+const avgReqsPerProject = computed(() => {
+  const total = projectStore.projects.length
+  if (!total) return 0
+  return Math.round(totalReqs.value / total)
+})
 
 function openProject(p: Project) {
   projectStore.setCurrent(p)
@@ -148,13 +189,14 @@ function providerName(p: string) {
 
 <style scoped>
 .dashboard { width: 100%; max-width: none; }
-.page-title { margin-bottom: 24px; }
+.page-title { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .page-title h2 { font-size: 22px; font-weight: 700; }
 .subtitle { color: var(--text-secondary); font-size: 14px; }
+.title-actions { display: flex; gap: 8px; }
 
 .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
 .stat-card {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -165,10 +207,16 @@ function providerName(p: string) {
 .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
 .stat-value { font-size: 26px; font-weight: 700; line-height: 1; }
 .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.stat-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
 
 .section { background: #fff; border-radius: 12px; border: 1px solid var(--border); padding: 20px 24px; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-header h3 { font-size: 16px; font-weight: 600; }
+.status-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.status-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #f9fafb; }
+.status-title { font-size: 12px; color: #6b7280; }
+.status-value { font-size: 20px; font-weight: 700; margin: 6px 0; color: #111827; }
+.status-desc { font-size: 12px; color: #6b7280; }
 
 .project-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .project-card {
@@ -187,6 +235,7 @@ function providerName(p: string) {
 .p-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .p-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-meta { display: flex; gap: 8px; font-size: 11px; color: #9ca3af; }
+.meta-pill { border: 1px solid #e5e7eb; border-radius: 999px; padding: 1px 8px; color: #6b7280; background: #f8fafc; }
 .new-project {
   flex-direction: column;
   align-items: center;
@@ -206,7 +255,9 @@ function providerName(p: string) {
 .q-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; min-height: 36px; }
 
 @media (max-width: 900px) {
+  .page-title { flex-direction: column; align-items: flex-start; }
   .stat-cards { grid-template-columns: repeat(2, 1fr); }
+  .status-board { grid-template-columns: 1fr; }
   .project-grid { grid-template-columns: repeat(2, 1fr); }
   .quick-grid { grid-template-columns: 1fr; }
 }
