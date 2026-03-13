@@ -70,7 +70,7 @@ watch(() => route.params.id, loadProject)
   flex-direction: column; 
   height: 100%; 
   min-height: 0;
-  gap: 24px;
+  gap: 12px;
 }
 
 .project-header {
@@ -140,12 +140,12 @@ watch(() => route.params.id, loadProject)
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 4px;
-  font-size: 14px;
+  padding: 16px 8px; /* Increased padding */
+  font-size: 16px; /* Increased font size */
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent; /* Thicker border */
   transition: all 0.2s;
 }
 .nav-item:hover {
@@ -154,9 +154,9 @@ watch(() => route.params.id, loadProject)
 .nav-item.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
-  font-weight: 600;
+  font-weight: 700; /* Bolder font */
 }
-.nav-item .el-icon { font-size: 16px; }
+.nav-item .el-icon { font-size: 18px; /* Larger icons */ }
 
 .detail-content { 
   flex: 1; 

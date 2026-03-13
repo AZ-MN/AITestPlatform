@@ -1,12 +1,7 @@
 <template>
   <div class="members-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>项目成员</h2>
-        <p class="subtitle">管理项目成员及其权限角色。</p>
-      </div>
-      <el-button type="primary" :icon="Plus" @click="openAddDialog">添加成员</el-button>
+    <div class="page-desc">
+      <p class="subtitle">管理项目成员及其权限角色。</p>
     </div>
 
     <!-- Stats Overview -->
@@ -38,6 +33,10 @@
           <div class="stat-value">{{ viewerCount }}</div>
           <div class="stat-label">访客</div>
         </div>
+      </div>
+      
+      <div class="action-card">
+         <el-button type="primary" :icon="Plus" size="large" class="add-member-btn" @click="openAddDialog">添加成员</el-button>
       </div>
     </div>
 
@@ -317,30 +316,35 @@ function stringToColor(str: string) {
   width: 100%;
 }
 
-.page-header {
+.page-desc {
+  height: 28px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding: 0;
 }
-.page-header h2 {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 14px;
-}
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
 
 /* Stats Overview */
 .stats-overview {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, 1fr) auto;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
+.action-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.add-member-btn {
+  height: 100%;
+  width: 100%;
+  min-height: 80px;
+  font-size: 16px;
+}
+
 .stat-card {
   background: var(--card-bg);
   border: 1px solid var(--border);

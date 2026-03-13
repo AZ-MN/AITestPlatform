@@ -1,11 +1,7 @@
 <template>
   <div class="generate-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>智能生成</h2>
-        <p class="subtitle">配置 AI 模型参数，自动基于需求生成高质量测试用例。</p>
-      </div>
+    <div class="page-desc">
+       <p class="subtitle">配置 AI 模型参数，自动基于需求生成高质量测试用例。</p>
     </div>
 
     <div class="workspace">
@@ -367,17 +363,15 @@ function priorityType(p: string) {
   max-width: 100%;
 }
 
-.page-header {
-  margin-bottom: 24px;
+.page-desc {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
   flex-shrink: 0;
+  padding: 0;
 }
-.page-header h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-.subtitle { color: var(--text-secondary); font-size: 14px; }
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
 
 .workspace {
   flex: 1;

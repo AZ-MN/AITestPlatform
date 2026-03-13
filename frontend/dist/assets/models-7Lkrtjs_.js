@@ -1,1 +1,0 @@
-import{as as s}from"./index-CWOeXA3E.js";const d={providers:()=>s.get("/models/providers"),list:()=>s.get("/models"),add:e=>s.post("/models",e),update:(e,t)=>s.put(`/models/${e}`,t),remove:e=>s.delete(`/models/${e}`),test:e=>s.post(`/models/${e}/test`)};export{d as m};

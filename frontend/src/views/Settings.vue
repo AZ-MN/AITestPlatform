@@ -1,33 +1,31 @@
 <template>
   <div class="settings-container">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>模型设置</h2>
-        <p class="subtitle">配置 AI 模型连接参数，管理您的生成能力</p>
-      </div>
-      <el-button type="primary" :icon="Plus" @click="openAdd" class="add-btn">添加模型</el-button>
+    <div class="page-desc">
+       <p class="subtitle">配置 AI 模型连接参数，管理您的生成能力。</p>
     </div>
 
-    <!-- Info Banner -->
-    <div class="info-banner">
-      <div class="banner-left">
-        <div class="banner-icon-box">
-          <el-icon><InfoFilled /></el-icon>
-        </div>
-        <div class="banner-content">
-          <h4 class="banner-title">配置说明</h4>
-          <p class="banner-text">配置 API Key 后即可启用 AI 生成功能，建议至少配置一个模型以保证生成质量。</p>
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">已配置模型</span>
+        <span class="stat-value">{{ configs.length }}</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">默认模型</span>
+        <span class="stat-value primary">{{ configs.find(c => c.is_default)?.model_name || '未设置' }}</span>
+      </div>
+      <div class="stat-divider"></div>
+      
+      <div class="provider-chips">
+        <div v-for="p in providers" :key="p.id" class="provider-chip">
+          <span class="chip-icon">{{ providerIcon(p.id) }}</span>
+          <span class="chip-name">{{ p.name }}</span>
         </div>
       </div>
-      <div class="banner-right">
-        <span class="providers-label">支持供应商：</span>
-        <div class="provider-chips">
-          <div v-for="p in providers" :key="p.id" class="provider-chip">
-            <span class="chip-icon">{{ providerIcon(p.id) }}</span>
-            <span class="chip-name">{{ p.name }}</span>
-          </div>
-        </div>
+
+      <div class="header-actions">
+        <el-button type="primary" :icon="Plus" @click="openAdd">添加模型</el-button>
       </div>
     </div>
 
@@ -335,52 +333,48 @@ function providerIcon(id: string) {
   background: var(--bg);
 }
 
-.page-header {
+.page-desc {
+  height: 28px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding: 0;
 }
-.page-header h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-.subtitle { color: var(--text-secondary); font-size: 14px; }
-.add-btn { padding: 10px 20px; font-weight: 600; }
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
 
-/* Info Banner */
-.info-banner {
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
   background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
   border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
   box-shadow: var(--shadow-sm);
+}
+.stat-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: 4px;
 }
-.banner-left { display: flex; align-items: center; gap: 16px; flex: 1; }
-.banner-icon-box {
-  width: 40px; height: 40px; border-radius: 10px; background: rgba(79, 70, 229, 0.1);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--primary); font-size: 20px;
-}
-.banner-content { flex: 1; }
-.banner-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px 0; }
-.banner-text { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.4; }
+.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.stat-value.primary { color: var(--primary); }
+.stat-divider { width: 1px; height: 24px; background: var(--border); margin: 0 24px; }
 
-.banner-right { display: flex; align-items: center; gap: 12px; border-left: 1px solid var(--border); padding-left: 24px; }
-.providers-label { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
-.provider-chips { display: flex; gap: 8px; }
+.provider-chips { display: flex; gap: 8px; flex: 1; margin-left: 24px; overflow-x: auto; }
 .provider-chip {
   display: flex; align-items: center; gap: 6px; padding: 6px 10px;
   background: var(--bg-secondary); border-radius: 6px;
   font-size: 12px; font-weight: 600; color: var(--text-primary);
   border: 1px solid transparent;
+  flex-shrink: 0;
 }
+
+.header-actions { margin-left: auto; }
 
 /* Models Area */
 .models-area { flex: 1; overflow-y: auto; padding-bottom: 20px; min-height: 0; }

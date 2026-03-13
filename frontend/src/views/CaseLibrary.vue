@@ -1,15 +1,7 @@
 <template>
   <div class="case-library">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>用例库</h2>
-        <p class="subtitle">集中管理测试用例，支持多维度筛选、评审与导出。</p>
-      </div>
-      <div class="header-actions">
-        <el-button :icon="Download" @click="showExport = true">导出数据</el-button>
-        <el-button type="primary" :icon="Plus" @click="showCreate = true">新建用例</el-button>
-      </div>
+    <div class="page-desc">
+       <p class="subtitle">集中管理测试用例，支持多维度筛选、评审与导出。</p>
     </div>
 
     <!-- Stats / Overview -->
@@ -27,6 +19,11 @@
       <div class="stat-item" v-if="selectedIds.length">
         <span class="stat-label">已选择</span>
         <span class="stat-value primary">{{ selectedIds.length }}</span>
+      </div>
+      
+      <div style="margin-left: auto; display: flex; gap: 12px;">
+         <el-button :icon="Download" @click="showExport = true">导出数据</el-button>
+         <el-button type="primary" :icon="Plus" @click="showCreate = true">新建用例</el-button>
       </div>
     </div>
 
@@ -366,13 +363,13 @@ function resetFilters() {
 
 // Bulk Actions
 function handleBatchCommand(cmd: string) {
-  if (cmd === 'review') batchSubmitReview()
+  if (cmd === 'review') handleBatchReview()
   if (cmd === 'approve') batchApprove()
   if (cmd === 'reset') batchResetDraft()
-  if (cmd === 'delete') batchDelete()
+  if (cmd === 'delete') handleBatchDelete()
 }
 
-async function batchDelete() {
+async function handleBatchDelete() {
   try {
     await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条用例吗？`, '批量删除', { type: 'warning' })
     await caseApi.batchDelete(selectedIds.value)
@@ -382,7 +379,7 @@ async function batchDelete() {
   } catch(e) {}
 }
 
-async function batchSubmitReview() {
+async function handleBatchReview() {
   await batchUpdateStatus('pending_review', '已批量提交评审')
 }
 async function batchApprove() {
@@ -561,20 +558,15 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 
   max-width: 100%;
 }
 
-.page-header {
+.page-desc {
+  height: 28px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   flex-shrink: 0;
+  padding: 0;
 }
-.page-header h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-.subtitle { color: var(--text-secondary); font-size: 14px; }
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
 
 /* Stats Bar */
 .stats-bar {
@@ -612,6 +604,27 @@ const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 
 .filter-group { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .filter-input { width: 220px; }
 .filter-select { width: 140px; }
+
+/* Batch Actions */
+.batch-actions {
+  display: flex;
+  align-items: center; /* Ensure vertical centering */
+  justify-content: center; /* Add if needed, but flex-start is usually default */
+  height: 32px; /* Set fixed height for better alignment */
+  gap: 12px;
+  background: var(--bg-secondary);
+  padding: 0 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.sel-count { 
+  font-size: 13px; 
+  color: var(--text-secondary); 
+  margin-right: 16px; 
+  line-height: 1; /* Remove line-height offset */
+  display: flex;
+  align-items: center;
+}
 
 /* Table */
 .table-container {

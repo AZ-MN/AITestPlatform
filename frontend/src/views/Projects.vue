@@ -1,12 +1,29 @@
 <template>
   <div class="projects-container">
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>项目列表</h2>
-        <p class="subtitle">管理您的所有测试项目，包括需求分析与用例生成。</p>
+    <div class="page-desc">
+       <p class="subtitle">管理您的所有测试项目，包括需求分析与用例生成。</p>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">项目总数</span>
+        <span class="stat-value">{{ projectStore.projects.length }}</span>
       </div>
-      <el-button type="primary" size="large" :icon="Plus" @click="openCreate">新建项目</el-button>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">进行中</span>
+        <span class="stat-value primary">{{ projectStore.projects.filter(p => p.status === 'active').length }}</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">已归档</span>
+        <span class="stat-value info">{{ projectStore.projects.filter(p => p.status === 'archived').length }}</span>
+      </div>
+      
+      <div class="header-actions">
+        <el-button type="primary" :icon="Plus" @click="openCreate">新建项目</el-button>
+      </div>
     </div>
 
     <!-- Toolbar -->
@@ -308,22 +325,40 @@ async function confirmDelete(p: Project) {
   flex-direction: column;
 }
 
-.page-header {
+.page-desc {
+  height: 28px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding: 0;
 }
-.page-header h2 {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 14px;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
+.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.stat-value.primary { color: var(--primary); }
+.stat-value.info { color: var(--text-secondary); }
+.stat-divider { width: 1px; height: 24px; background: var(--border); margin: 0 24px; }
+
+.header-actions { margin-left: auto; }
 
 .toolbar {
   display: flex;

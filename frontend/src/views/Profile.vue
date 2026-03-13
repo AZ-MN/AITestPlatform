@@ -1,8 +1,7 @@
 <template>
   <div class="profile-page">
-    <div class="page-header">
-      <h2>个人设置</h2>
-      <p class="sub-title">管理您的个人信息和安全设置</p>
+    <div class="page-desc">
+       <p class="subtitle">管理您的个人信息和安全设置</p>
     </div>
 
     <div class="profile-card page-card">
@@ -110,13 +109,23 @@ async function handleSave() {
 <style scoped>
 .profile-page { 
   width: 100%; 
-  max-width: 1000px; 
-  /* No margin auto to align left if desired, or auto for center. User said "tiled", so left align or full width is safer. */
-  /* But for a form, reading width is important. */
+  /* max-width removed for full width tiling */
 }
 
-.profile-card {
+.page-desc {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
   padding: 0;
+}
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
+.profile-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 

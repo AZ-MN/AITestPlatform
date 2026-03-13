@@ -1,15 +1,7 @@
 <template>
   <div class="req-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2>需求管理</h2>
-        <p class="subtitle">集中管理项目需求文档，支持 AI 智能解析与结构化预览。</p>
-      </div>
-      <div class="header-actions">
-        <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
-        <el-button type="primary" :icon="Plus" @click="showText = true">手动输入</el-button>
-      </div>
+    <div class="page-desc">
+       <p class="subtitle">集中管理项目需求文档，支持 AI 智能解析与结构化预览。</p>
     </div>
 
     <!-- Stats Bar -->
@@ -33,8 +25,13 @@
         <span class="stat-label">需求点总数</span>
         <span class="stat-value primary">{{ pointsTotal }}</span>
       </div>
+      
+      <div class="header-actions">
+        <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
+        <el-button type="primary" :icon="Plus" @click="showText = true">手动输入</el-button>
+      </div>
     </div>
-
+    
     <!-- Requirements Table -->
     <div class="table-container">
       <div v-if="!loading && requirements.length === 0" class="empty-state">
@@ -523,6 +520,15 @@ const truncate = (s: string, n=20) => s?.length > n ? s.slice(0, n) + '...' : s
 .subtitle { color: var(--text-secondary); font-size: 14px; }
 
 /* Stats Bar */
+.page-desc {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.subtitle { color: var(--text-secondary); font-size: 14px; margin: 0; }
+
 .stats-bar {
   display: flex;
   align-items: center;

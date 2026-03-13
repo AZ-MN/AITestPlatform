@@ -1,11 +1,10 @@
 <template>
   <div class="dashboard">
-    <div class="page-title">
-      <div>
-        <h2>仪表盘</h2>
-        <span class="subtitle">欢迎回来，{{ auth.user?.full_name }} 👋</span>
+    <div class="dashboard-header">
+      <div class="page-desc">
+         <p class="subtitle">欢迎回来，{{ auth.user?.full_name }} 👋</p>
       </div>
-      <div class="title-actions">
+      <div class="header-actions">
         <el-button @click="$router.push('/projects')">项目管理</el-button>
         <el-button type="primary" @click="goGenerate">开始生成</el-button>
       </div>
@@ -203,31 +202,24 @@ function providerName(p: string) {
 </script>
 
 <style scoped>
-.dashboard { width: 100%; display: flex; flex-direction: column; gap: 32px; }
+.dashboard { width: 100%; display: flex; flex-direction: column; gap: 24px; }
 
-/* 头部欢迎区 - 更加紧凑 */
-.page-title { 
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 24px;
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  gap: 24px; 
-  box-shadow: var(--shadow-sm);
-  background-image: radial-gradient(circle at right top, var(--primary-light), transparent 40%);
+/* 头部欢迎区 */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 8px;
 }
-.page-title h2 { 
-  font-size: 20px; 
-  font-weight: 700; 
-  color: var(--text-primary);
-  margin-bottom: 4px;
-  letter-spacing: -0.5px;
-}
+.page-desc { flex: 1; }
 .subtitle { 
   color: var(--text-secondary); 
   font-size: 14px; 
+  margin: 0;
+}
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
 /* 统计卡片 - 卡片化设计 */
