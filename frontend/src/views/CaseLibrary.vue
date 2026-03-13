@@ -85,17 +85,17 @@
         class="cases-table"
       >
         <el-table-column type="selection" width="48" align="center" />
-        <el-table-column label="ID" prop="case_id" width="120" fixed show-overflow-tooltip>
+        <el-table-column label="ID" prop="case_id" width="140" fixed show-overflow-tooltip>
           <template #default="{ row }">
             <span class="mono-text">{{ row.case_id }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="标题" prop="title" min-width="220" show-overflow-tooltip>
+        <el-table-column label="标题" prop="title" min-width="300" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="case-title">{{ row.title }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="模块" prop="module" min-width="220" show-overflow-tooltip>
+        <el-table-column label="模块" prop="module" min-width="120" show-overflow-tooltip>
            <template #default="{ row }">
              <span class="module-text">{{ row.module || '-' }}</span>
            </template>
