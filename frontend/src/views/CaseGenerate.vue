@@ -13,7 +13,10 @@
       <div class="config-panel">
         <div class="panel-header">
           <h3>生成配置</h3>
-          <el-button link type="primary" @click="resetConfig">重置</el-button>
+          <el-button link class="reset-icon-btn" @click="resetConfig">
+             <el-icon><RefreshRight /></el-icon>
+             <span>重置</span>
+          </el-button>
         </div>
         
         <div class="config-scroll">
@@ -190,7 +193,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MagicStick, Document, Cpu, Setting } from '@element-plus/icons-vue'
+import { MagicStick, Document, Cpu, Setting, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import { caseApi } from '@/api/cases'
@@ -200,6 +203,16 @@ import type { Requirement, RequirementPoint, AIModelConfig } from '@/api/types'
 const route = useRoute()
 const router = useRouter()
 const projectId = computed(() => Number(route.params.id))
+
+const DEFAULT_PROMPT = `作为资深测试工程师，请基于需求文档生成全面的测试用例。
+重点关注：
+1. [此处填写重点模块，如：登录流程]
+2. 异常场景和边界值处理
+3. 数据一致性和安全性
+
+输出要求：
+- 步骤清晰，预期结果明确
+- 覆盖正向和逆向场景`
 
 // State
 const requirements = ref<Requirement[]>([])
@@ -218,7 +231,7 @@ const config = reactive({
   cover_scenarios: ['normal', 'exception', 'boundary'],
   ai_provider: undefined as string | undefined,
   temperature: 0.3,
-  case_prompt: '',
+  case_prompt: DEFAULT_PROMPT,
   module_filter: undefined as string | undefined,
 })
 
@@ -277,7 +290,7 @@ function resetConfig() {
   config.test_type = 'functional'
   config.granularity = 'medium'
   config.cover_scenarios = ['normal', 'exception', 'boundary']
-  config.case_prompt = ''
+  config.case_prompt = DEFAULT_PROMPT
   config.module_filter = undefined
   config.temperature = 0.3
   lastResult.value = null
@@ -376,30 +389,45 @@ function priorityType(p: string) {
 
 /* Config Panel */
 .config-panel {
-  width: 380px;
+  width: 320px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 .panel-header {
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.panel-header h3 { font-size: 16px; font-weight: 700; margin: 0; }
+.panel-header h3 { font-size: 15px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.reset-icon-btn { 
+  font-size: 13px; 
+  padding: 4px 8px; 
+  height: auto; 
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.reset-icon-btn:hover {
+  color: var(--primary);
+}
 
 .config-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
 }
 .panel-footer {
-  padding: 16px 20px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: var(--bg-secondary);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);

@@ -33,7 +33,10 @@
       <div class="section project-section-small">
       <div class="section-header">
         <h3>最近项目</h3>
-        <el-button link type="primary" @click="$router.push('/projects')">全部项目 <el-icon><ArrowRight /></el-icon></el-button>
+        <div class="view-all-btn" @click="$router.push('/projects')">
+          <span>全部项目</span>
+          <el-icon><ArrowRight /></el-icon>
+        </div>
       </div>
       <div class="project-grid-mini">
         <div v-for="p in recentProjects" :key="p.id" class="project-mini-card" @click="openProject(p)">
@@ -207,7 +210,7 @@ function providerName(p: string) {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px 24px;
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
@@ -216,7 +219,7 @@ function providerName(p: string) {
   background-image: radial-gradient(circle at right top, var(--primary-light), transparent 40%);
 }
 .page-title h2 { 
-  font-size: 24px; 
+  font-size: 20px; 
   font-weight: 700; 
   color: var(--text-primary);
   margin-bottom: 4px;
@@ -300,6 +303,21 @@ function providerName(p: string) {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.view-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.view-all-btn:hover {
+  color: var(--primary);
+}
+.view-all-btn:hover .el-icon {
+  transform: translateX(2px);
 }
 
 /* Guide Row */

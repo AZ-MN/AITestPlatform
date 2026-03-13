@@ -18,6 +18,8 @@
           prefix-icon="Search"
           clearable
           class="search-input"
+          size="default"
+          style="width: 240px;"
         />
         <el-radio-group v-model="statusFilter" class="status-filter">
           <el-radio-button label="all">全部项目</el-radio-button>
@@ -25,7 +27,10 @@
           <el-radio-button label="archived">已归档</el-radio-button>
         </el-radio-group>
         
-        <el-button @click="resetFilters" class="reset-btn">重置</el-button>
+        <el-button link class="reset-btn" @click="resetFilters">
+          <el-icon><RefreshLeft /></el-icon>
+          <span style="margin-left: 4px">重置</span>
+        </el-button>
       </div>
       <div class="right-tools">
         <span class="count-badge">共 {{ filteredProjects.length }} 个项目</span>
@@ -349,8 +354,8 @@ async function confirmDelete(p: Project) {
 /* Grid Layout */
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
   padding-bottom: 20px;
 }
 
@@ -500,14 +505,12 @@ async function confirmDelete(p: Project) {
 /* Reset Button Override */
 .reset-btn {
   margin-left: 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-weight: 500;
 }
-.reset-btn:hover, .reset-btn:focus {
-  background: var(--primary) !important;
-  border-color: var(--primary) !important;
-  color: #fff !important;
+.reset-btn:hover {
+  color: var(--primary);
 }
 
 /* Dialog Styles */

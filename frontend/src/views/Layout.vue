@@ -2,7 +2,7 @@
   <el-container class="app-layout">
     <!-- 侧边栏 -->
     <el-aside :width="collapsed ? '64px' : '220px'" class="sidebar">
-      <div class="sidebar-header">
+      <div class="sidebar-header" :class="{ collapsed }">
         <span class="logo-icon">✨</span>
         <transition name="fade">
           <span v-if="!collapsed" class="logo-text">AI测试平台</span>
@@ -31,18 +31,18 @@
         </el-menu-item>
       </el-menu>
 
-      <div class="sidebar-footer">
-        <el-tooltip 
-          :content="collapsed ? '展开导航' : '收起导航'" 
-          placement="right" 
-          :show-after="500"
-        >
-          <div class="collapse-trigger" @click="collapsed = !collapsed">
-            <el-icon class="collapse-icon">
-              <Fold v-if="!collapsed" /><Expand v-else />
-            </el-icon>
-          </div>
-        </el-tooltip>
+      <div class="sidebar-footer"></div>
+      
+      <!-- Toggle Button (Floating) -->
+      <div 
+        class="collapse-trigger" 
+        :class="{ collapsed }"
+        @click="collapsed = !collapsed"
+      >
+        <el-icon class="collapse-icon">
+          <ArrowLeft v-if="!collapsed" />
+          <ArrowRight v-else />
+        </el-icon>
       </div>
     </el-aside>
 
@@ -92,6 +92,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { ElMessageBox } from 'element-plus'
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
 const auth = useAuthStore()
 const projectStore = useProjectStore()
@@ -149,10 +150,11 @@ async function handleCommand(cmd: string) {
   background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
   display: flex;
   flex-direction: column;
-  transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
-  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible; /* Allow toggle to overflow */
   z-index: 20;
   box-shadow: 4px 0 24px rgba(0,0,0,0.1);
+  position: relative;
 }
 
 .sidebar-header {
@@ -163,6 +165,12 @@ async function handleCommand(cmd: string) {
   padding: 0 20px;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+  transition: all 0.3s;
+}
+.sidebar-header.collapsed {
+  justify-content: center;
+  padding: 0;
 }
 .logo-icon { 
   font-size: 24px; 
@@ -193,6 +201,29 @@ async function handleCommand(cmd: string) {
   font-weight: 500;
   border: 1px solid transparent;
 }
+
+/* Center icons when collapsed */
+:deep(.el-menu--collapse .el-menu-item) {
+  padding: 0 !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%; /* Use full width of collapsed container */
+}
+:deep(.el-menu--collapse .el-menu-item .el-icon) { 
+  margin: 0; 
+  font-size: 20px;
+  vertical-align: middle;
+  text-align: center;
+}
+:deep(.el-menu--collapse .el-tooltip__trigger) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 :deep(.el-menu-item:hover) {
   background: rgba(255,255,255,0.08) !important;
   color: #f8fafc !important;
@@ -206,32 +237,39 @@ async function handleCommand(cmd: string) {
 :deep(.el-menu-item .el-icon) { font-size: 18px; margin-right: 10px; }
 
 .sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  display: flex;
-  justify-content: center;
+  padding: 0;
+  height: 20px;
 }
 
 .collapse-trigger {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 16px;
+  height: 32px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px 0 0 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  color: #94a3b8;
+  z-index: 30;
+  opacity: 0;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-right: none;
+}
+.sidebar:hover .collapse-trigger {
+  opacity: 1;
 }
 .collapse-trigger:hover {
   background: rgba(79, 70, 229, 0.8);
-  transform: scale(1.1);
-  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+  color: #fff;
+  width: 20px;
 }
-.collapse-icon { font-size: 20px; transition: transform 0.3s; }
-.collapse-trigger:hover .collapse-icon { transform: rotate(180deg); }
+.collapse-icon { font-size: 10px; }
 
 /* Main Container */
 .main-container { 

@@ -28,9 +28,6 @@
         <span class="stat-label">已选择</span>
         <span class="stat-value primary">{{ selectedIds.length }}</span>
       </div>
-      <div class="stat-item" v-if="regressionMode">
-         <el-tag type="warning" effect="dark" closable @close="exitRegressionMode">最小回归集模式</el-tag>
-      </div>
     </div>
 
     <!-- Filters & Toolbar -->
@@ -38,7 +35,7 @@
       <div class="filter-group">
         <el-input 
           v-model="filters.keyword" 
-          placeholder="搜索用例标题..." 
+          placeholder="搜索用例标题/ID..." 
           :prefix-icon="Search" 
           clearable 
           class="filter-input"
@@ -48,7 +45,6 @@
           <el-option label="功能测试" value="functional" />
           <el-option label="接口测试" value="api" />
           <el-option label="单元测试" value="unit" />
-          <el-option label="回归测试" value="regression" />
         </el-select>
         <el-select v-model="filters.case_level" placeholder="优先级" clearable class="filter-select" @change="fetchCases">
           <el-option label="P0 核心" value="P0" />
@@ -60,26 +56,18 @@
           <el-option label="草稿" value="draft" />
           <el-option label="待评审" value="pending_review" />
           <el-option label="已评审" value="reviewed" />
-          <el-option label="已作废" value="deprecated" />
         </el-select>
-        <el-button @click="resetFilters" icon="Refresh">重置</el-button>
+        <el-button @click="resetFilters" :icon="Refresh" circle />
       </div>
       
       <div class="action-group">
-        <el-dropdown v-if="selectedIds.length" trigger="click" @command="handleBatchCommand">
-          <el-button type="primary" plain>
-            批量操作 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="review">提交评审</el-dropdown-item>
-              <el-dropdown-item command="approve">评审通过</el-dropdown-item>
-              <el-dropdown-item command="reset">重置草稿</el-dropdown-item>
-              <el-dropdown-item command="delete" divided class="text-danger">批量删除</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-button v-else type="warning" plain @click="loadMinimalRegression">生成最小回归集</el-button>
+        <transition name="el-fade-in">
+          <div v-if="selectedIds.length" class="batch-actions">
+            <span class="sel-count">已选 {{ selectedIds.length }} 项</span>
+            <el-button type="primary" size="small" @click="handleBatchReview">提交评审</el-button>
+            <el-button type="danger" size="small" plain @click="handleBatchDelete">批量删除</el-button>
+          </div>
+        </transition>
       </div>
     </div>
 
@@ -93,43 +81,55 @@
         row-key="id"
         height="100%"
         stripe
+        border
+        class="cases-table"
       >
         <el-table-column type="selection" width="48" align="center" />
-        <el-table-column label="ID" prop="case_id" width="100" fixed>
+        <el-table-column label="ID" prop="case_id" width="120" fixed show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="mono-text text-secondary">{{ row.case_id }}</span>
+            <span class="mono-text">{{ row.case_id }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="标题" prop="title" min-width="280" show-overflow-tooltip>
+        <el-table-column label="标题" prop="title" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="case-title">{{ row.title }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="模块" prop="module" width="120" show-overflow-tooltip />
-        <el-table-column label="优先级" width="90" align="center">
+        <el-table-column label="模块" prop="module" min-width="220" show-overflow-tooltip>
+           <template #default="{ row }">
+             <span class="module-text">{{ row.module || '-' }}</span>
+           </template>
+        </el-table-column>
+        <el-table-column label="优先级" width="100" align="center" show-overflow-tooltip>
           <template #default="{ row }">
-            <span :class="['priority-badge', `p-${row.case_level?.toLowerCase()}`]">{{ row.case_level }}</span>
+            <el-tag :type="priorityType(row.case_level)" size="small" effect="dark" class="prio-tag">{{ row.case_level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="100" align="center">
+        <el-table-column label="类型" width="100" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tag type="info" size="small" effect="plain">{{ typeLabel(row.test_type) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="来源" width="90" align="center">
+        <el-table-column label="来源" width="90" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tag :type="row.ai_generated ? 'primary' : 'warning'" size="small" effect="light" round>
-              {{ row.ai_generated ? 'AI生成' : '手动' }}
+              {{ row.ai_generated ? 'AI' : '人工' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="100" align="center" show-overflow-tooltip>
           <template #default="{ row }">
              <div class="status-indicator">
                 <span :class="['status-dot', row.status]"></span>
                 {{ statusLabel(row.status) }}
              </div>
           </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" align="center" fixed="right">
+           <template #default="{ row }">
+              <el-button :icon="Edit" circle size="small" @click.stop="editCase(row)" />
+              <el-button :icon="Delete" circle size="small" type="danger" plain @click.stop="deleteCase(row)" />
+           </template>
         </el-table-column>
       </el-table>
     </div>
@@ -141,7 +141,7 @@
         :total="total" 
         v-model:current-page="page" 
         v-model:page-size="pageSize"
-        :page-sizes="[20, 50, 100]" 
+        :page-sizes="[10, 20, 50, 100]" 
         @change="fetchCases" 
       />
     </div>
@@ -293,7 +293,10 @@ import { caseApi } from '@/api/cases'
 import type { TestCase, CaseReviewLog } from '@/api/types'
 
 const route = useRoute()
-const projectId = computed(() => Number(route.params.id))
+const projectId = computed(() => {
+  const n = Number(route.params.id)
+  return isNaN(n) ? 0 : n
+})
 
 // State
 const cases = ref<TestCase[]>([])
@@ -312,7 +315,6 @@ const savingCase = ref(false)
 const exporting = ref(false)
 const exportFmt = ref('excel')
 const exportScope = ref('all')
-const regressionMode = ref(false)
 const ratingVal = ref(0)
 
 const filters = reactive({
@@ -327,10 +329,13 @@ const caseForm = reactive({
 const pendingCount = computed(() => cases.value.filter(c => c.status === 'pending_review').length)
 
 // Lifecycle
-onMounted(fetchCases)
+onMounted(() => {
+  if (projectId.value) fetchCases()
+})
 
 // Actions
 async function fetchCases() {
+  if (!projectId.value) return
   loading.value = true
   try {
     const res = await caseApi.list({
@@ -339,10 +344,14 @@ async function fetchCases() {
       page_size: pageSize.value,
       ...filters,
     })
-    cases.value = res.items
-    total.value = res.total
-    regressionMode.value = false
-  } finally { loading.value = false }
+    cases.value = res.items || []
+    total.value = res.total || 0
+  } catch (err) {
+    console.error('Fetch cases failed:', err)
+    ElMessage.error('获取用例列表失败')
+  } finally { 
+    loading.value = false 
+  }
 }
 
 function handleSelect(rows: TestCase[]) {
@@ -412,9 +421,6 @@ function viewCase(c: TestCase) {
   loadReviews(c.id)
 }
 
-async function loadReviews(caseId: number) {
-  reviewLogs.value = await caseApi.reviews(caseId)
-}
 
 function fillCaseForm(c: TestCase) {
   caseForm.title = c.title || ''
@@ -425,49 +431,74 @@ function fillCaseForm(c: TestCase) {
   caseForm.remarks = c.remarks || ''
 }
 
+function editCase(row: TestCase) {
+  detailCase.value = row
+  showDetail.value = true
+  editingCase.value = true
+  fillCaseForm(row)
+  loadReviews(row.id)
+}
+
 function toggleCaseEdit() {
   if (!detailCase.value) return
   editingCase.value = !editingCase.value
-  if (editingCase.value) fillCaseForm(detailCase.value)
+  if (editingCase.value) {
+    if (detailCase.value) {
+      Object.assign(caseForm, {
+        title: detailCase.value.title,
+        module: detailCase.value.module,
+        case_level: detailCase.value.case_level,
+        status: detailCase.value.status,
+        preconditions: detailCase.value.preconditions,
+        remarks: detailCase.value.remarks
+      })
+    }
+  }
 }
 
 async function saveCaseEdit() {
   if (!detailCase.value) return
   savingCase.value = true
   try {
-    const updated = await caseApi.update(detailCase.value.id, { ...caseForm })
-    detailCase.value = updated
-    await fetchCases()
+    await caseApi.update(detailCase.value.id, caseForm)
+    ElMessage.success('保存成功')
     editingCase.value = false
-    loadReviews(updated.id)
-    ElMessage.success('更新成功')
-  } catch(e) { ElMessage.error('更新失败') }
-  finally { savingCase.value = false }
+    fetchCases()
+    // Refresh detail
+    const res = await caseApi.get(detailCase.value.id)
+    detailCase.value = res
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    savingCase.value = false
+  }
 }
 
-async function deleteCase(c: TestCase) {
-  try {
-    await ElMessageBox.confirm('确认删除该用例？', '提示', { type: 'warning' })
-    await caseApi.remove(c.id)
-    ElMessage.success('删除成功')
-    showDetail.value = false
-    fetchCases()
-  } catch(e) {}
+function deleteCase(row: TestCase) {
+  ElMessageBox.confirm('确定删除该用例吗？', '提示', { type: 'warning' })
+    .then(async () => {
+      await caseApi.remove(row.id)
+      ElMessage.success('删除成功')
+      fetchCases()
+      if (detailCase.value?.id === row.id) showDetail.value = false
+    })
+    .catch(() => {})
 }
+
 
 // Single Status Update
 async function updateStatus(c: TestCase, status: string, msg: string) {
    try {
      await caseApi.setStatus(c.id, status)
-   } catch {
-     await caseApi.update(c.id, { status })
-   }
-   ElMessage.success(msg)
-   fetchCases()
-   if (detailCase.value?.id === c.id) {
-      detailCase.value.status = status
-      loadReviews(c.id)
-   }
+     ElMessage.success(msg)
+     fetchCases()
+     if (detailCase.value?.id === c.id) {
+        // Refresh
+        const res = await caseApi.get(c.id)
+        detailCase.value = res
+        loadReviews(c.id)
+     }
+   } catch { ElMessage.error('操作失败') }
 }
 
 async function submitReview(c: TestCase) { updateStatus(c, 'pending_review', '已提交评审') }
@@ -480,20 +511,11 @@ async function submitRating() {
   ElMessage.success('已评分')
 }
 
-// Regression
-async function loadMinimalRegression() {
+async function loadReviews(id: number) {
   try {
-    const { value } = await ElMessageBox.prompt('输入变更模块（逗号分隔）', '生成最小回归集')
-    loading.value = true
-    const res = await caseApi.minimalRegression({ project_id: projectId.value, changed_modules: value, limit: 50 })
-    cases.value = res.items
-    total.value = res.total
-    regressionMode.value = true
-    ElMessage.success(`生成成功，共 ${res.total} 条`)
-  } catch(e) {} 
-  finally { loading.value = false }
+    reviewLogs.value = await caseApi.reviews(id)
+  } catch(e) { reviewLogs.value = [] }
 }
-function exitRegressionMode() { fetchCases() }
 
 // Export
 async function handleExport() {
@@ -518,6 +540,11 @@ async function handleExport() {
 
 // Utils
 const typeLabel = (t: string) => ({ functional: '功能', api: '接口', unit: '单元', regression: '回归' })[t] || t
+const priorityType = (l: string) => {
+  if (!l) return 'info'
+  const map: any = { P0: 'danger', P1: 'warning', P2: 'warning', P3: 'info' }
+  return map[l.toUpperCase()] || 'info'
+}
 const stageLabel = (s: string) => ({ smoke: '冒烟', integration: '集成', system: '系统' })[s] || s
 const statusLabel = (s: string) => ({ draft: '草稿', pending_review: '待评审', reviewed: '已评审', deprecated: '已作废' })[s] || s
 const statusType = (s: string): any => ({ draft: 'info', pending_review: 'warning', reviewed: 'success', deprecated: 'danger' })[s] || 'info'

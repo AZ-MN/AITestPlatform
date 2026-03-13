@@ -153,16 +153,36 @@
       </template>
     </el-dialog>
 
-    <!-- Detail Drawer -->
-    <el-drawer v-model="showPoints" :title="truncate(currentReq?.title || '需求详情', 30)" size="600px" class="detail-drawer">
-      <div class="drawer-content">
-        <div class="drawer-header-actions">
-           <div class="meta-info">
-             <span class="meta-label">包含 {{ currentPoints.length }} 个需求点</span>
+    <!-- Detail Dialog -->
+    <el-dialog 
+      v-model="showPoints" 
+      :title="currentReq?.title || '需求详情'" 
+      width="75%" 
+      top="8vh"
+      class="req-detail-dialog"
+      destroy-on-close
+    >
+      <div class="dialog-body">
+        <div class="dialog-toolbar">
+           <div class="left-info">
+             <el-tag effect="plain" round class="count-tag">共 {{ currentPoints.length }} 个需求点</el-tag>
+             
+             <transition name="el-fade-in">
+               <div v-if="selectedPoints.length" class="batch-actions">
+                 <span class="sel-count">已选 {{ selectedPoints.length }} 项</span>
+                 <el-button type="primary" size="small" @click="openBatchEdit">批量修改</el-button>
+                 <el-button type="danger" size="small" plain @click="batchDeletePoints">批量删除</el-button>
+               </div>
+             </transition>
            </div>
-           <div class="actions">
-             <el-button v-if="!editingReq" :icon="Edit" circle @click="toggleEditReq" />
-             <el-button :icon="Delete" circle type="danger" plain @click="deleteCurrentReq" />
+           
+           <div class="right-actions">
+             <el-tooltip v-if="!editingReq" content="编辑" placement="top">
+                <el-button :icon="Edit" circle class="icon-btn" @click="toggleEditReq" />
+             </el-tooltip>
+             <el-tooltip content="删除" placement="top">
+                <el-button :icon="Delete" circle type="danger" plain class="icon-btn" @click="deleteCurrentReq" />
+             </el-tooltip>
            </div>
         </div>
 
@@ -179,31 +199,86 @@
           </el-form>
         </div>
 
-        <div v-else class="points-list">
-           <div v-for="(p, i) in currentPoints" :key="i" class="point-card">
-              <div class="point-head">
-                 <span class="point-idx">{{ p.id || `#${i+1}` }}</span>
-                 <el-tag size="small" :type="priorityType(p.priority)">{{ p.priority || 'P1' }}</el-tag>
-                 <span class="point-mod">{{ p.module || '通用' }}</span>
-              </div>
-              <div class="point-body">
-                 <div class="point-t">{{ p.title }}</div>
-                 <div class="point-d">{{ p.description }}</div>
-              </div>
-           </div>
-           <div v-if="!currentPoints.length" class="empty-points">
-              未解析出需求点，请检查文档内容或尝试重新解析。
+        <div v-else class="table-view">
+           <el-table 
+             :data="paginatedPoints" 
+             stripe 
+             border 
+             style="width: 100%" 
+             height="100%" 
+             class="points-table"
+             @selection-change="handleSelectionChange"
+           >
+              <el-table-column type="selection" width="45" align="center" />
+              <el-table-column prop="id" label="编码" width="100" show-overflow-tooltip sortable>
+                 <template #default="{ row, $index }">
+                    <span class="code-text">{{ row.id || `REQ-${String($index+1).padStart(3, '0')}` }}</span>
+                 </template>
+              </el-table-column>
+              <el-table-column prop="priority" label="优先级" width="100" sortable show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-tag :type="priorityType(row.priority)" size="small" effect="dark" class="prio-tag">{{ row.priority || 'P1' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="module" label="所属模块" width="160" show-overflow-tooltip sortable>
+                 <template #default="{ row }">
+                    <span class="module-text">{{ row.module }}</span>
+                 </template>
+              </el-table-column>
+              <el-table-column prop="title" label="需求标题" width="300" show-overflow-tooltip>
+                 <template #default="{ row }">
+                    <span class="title-text">{{ row.title }}</span>
+                 </template>
+              </el-table-column>
+              <el-table-column prop="description" label="详细内容" min-width="300" show-overflow-tooltip>
+                 <template #default="{ row }">
+                   <div class="desc-text">{{ row.description }}</div>
+                 </template>
+              </el-table-column>
+           </el-table>
+           <div class="pagination-bar">
+              <el-pagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="currentPoints.length"
+                size="small"
+                @size-change="handleSizeChange"
+                @current-change="handlePageChange"
+              />
            </div>
         </div>
       </div>
-    </el-drawer>
+    </el-dialog>
+
+    <!-- Batch Edit Dialog -->
+    <el-dialog v-model="showBatchEdit" title="批量修改" width="400px" append-to-body>
+      <el-form :model="batchForm" label-position="top">
+        <el-form-item label="优先级">
+          <el-select v-model="batchForm.priority" placeholder="不修改" clearable>
+            <el-option label="P0 (最高)" value="P0" />
+            <el-option label="P1 (高)" value="P1" />
+            <el-option label="P2 (中)" value="P2" />
+            <el-option label="P3 (低)" value="P3" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属模块">
+           <el-input v-model="batchForm.module" placeholder="输入模块名 (留空则不修改)" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showBatchEdit = false">取消</el-button>
+        <el-button type="primary" :loading="savingReqEdit" @click="handleBatchEditSave">确定修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Plus, Upload, Delete, Edit, Document, UploadFilled } from '@element-plus/icons-vue'
+import { Plus, Upload, Delete, Edit, Document, UploadFilled, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import type { Requirement, RequirementPoint } from '@/api/types'
@@ -219,18 +294,28 @@ const saving = ref(false)
 const showUpload = ref(false)
 const showText = ref(false)
 const showPoints = ref(false)
+const showBatchEdit = ref(false)
 const currentReq = ref<Requirement | null>(null)
 const editingReq = ref(false)
 const savingReqEdit = ref(false)
 const editingTitle = ref('')
 const editingPointsJson = ref('')
 const uploadFile = ref<File | null>(null)
+const selectedPoints = ref<RequirementPoint[]>([])
+const currentPage = ref(1)
+const pageSize = ref(10)
 
 const uploadForm = reactive({ title: '', useAi: true })
 const textForm = reactive({ title: '', content: '', useAi: true })
+const batchForm = reactive({ priority: '', module: '' })
 
 // Computed
 const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
+const paginatedPoints = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return currentPoints.value.slice(start, end)
+})
 const parsedCount = computed(() => requirements.value.filter(r => r.status === 'parsed').length)
 const pendingCount = computed(() => requirements.value.filter(r => r.status === 'parsing').length)
 const failedCount = computed(() => requirements.value.filter(r => r.status === 'failed').length)
@@ -240,6 +325,9 @@ const pointsTotal = computed(() => requirements.value.reduce((s, r) => s + (r.re
 onMounted(fetchReqs)
 
 // Actions
+function handlePageChange(val: number) { currentPage.value = val }
+function handleSizeChange(val: number) { pageSize.value = val }
+
 async function fetchReqs() {
   loading.value = true
   try { requirements.value = await requirementApi.list(projectId.value) }
@@ -299,6 +387,67 @@ function viewReq(req: Requirement) {
   editingTitle.value = req.title
   editingPointsJson.value = JSON.stringify((req.parse_result as RequirementPoint[]) || [], null, 2)
   showPoints.value = true
+  selectedPoints.value = []
+  currentPage.value = 1
+}
+
+function handleSelectionChange(val: RequirementPoint[]) {
+  selectedPoints.value = val
+}
+
+async function batchDeletePoints() {
+  if (!selectedPoints.value.length || !currentReq.value) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedPoints.value.length} 个需求点吗？`, '批量删除', { type: 'warning' })
+    
+    // Filter out selected points
+    const selectedIds = new Set(selectedPoints.value.map(p => p.id))
+    const newPoints = (currentReq.value.parse_result as RequirementPoint[]).filter(p => !selectedIds.has(p.id))
+    
+    await updateReqPoints(newPoints)
+  } catch(e) {}
+}
+
+function openBatchEdit() {
+  batchForm.priority = ''
+  batchForm.module = ''
+  showBatchEdit.value = true
+}
+
+async function handleBatchEditSave() {
+  if (!selectedPoints.value.length || !currentReq.value) return
+  
+  const points = [...(currentReq.value.parse_result as RequirementPoint[])]
+  const selectedIds = new Set(selectedPoints.value.map(p => p.id))
+  
+  points.forEach(p => {
+    if (selectedIds.has(p.id)) {
+      if (batchForm.priority) p.priority = batchForm.priority
+      if (batchForm.module) p.module = batchForm.module
+    }
+  })
+  
+  await updateReqPoints(points)
+  showBatchEdit.value = false
+}
+
+async function updateReqPoints(points: RequirementPoint[]) {
+  if (!currentReq.value) return
+  savingReqEdit.value = true
+  try {
+    const updated = await requirementApi.update(currentReq.value.id, {
+      ...currentReq.value,
+      parse_result: points,
+    })
+    currentReq.value = updated
+    selectedPoints.value = []
+    fetchReqs()
+    ElMessage.success('更新成功')
+  } catch(e) {
+    ElMessage.error('更新失败')
+  } finally {
+    savingReqEdit.value = false
+  }
 }
 
 async function deleteCurrentReq() {
@@ -433,20 +582,121 @@ const truncate = (s: string, n=20) => s?.length > n ? s.slice(0, n) + '...' : s
 .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
 .empty-actions { margin-top: 24px; display: flex; gap: 12px; }
 
-/* Drawer & Points */
-.drawer-content { padding: 20px; }
-.drawer-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
-.meta-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+/* Dialog Styles */
+.req-detail-dialog :deep(.el-dialog__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+}
+.req-detail-dialog :deep(.el-dialog__title) { font-weight: 700; color: var(--text-primary); }
+.req-detail-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+.dialog-body { padding: 24px; height: 100%; display: flex; flex-direction: column; }
 
-.points-list { display: flex; flex-direction: column; gap: 16px; }
-.point-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-.point-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.point-idx { font-family: monospace; font-size: 12px; color: var(--text-secondary); }
-.point-mod { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-.point-t { font-weight: 700; color: var(--text-primary); margin-bottom: 4px; font-size: 15px; }
-.point-d { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+.dialog-toolbar { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 20px; 
+}
+.left-info { display: flex; align-items: center; gap: 16px; height: 32px; }
+.count-tag { font-weight: 600; border: none; background: #f3f4f6; color: #4b5563; }
+.doc-meta { color: var(--text-secondary); font-size: 13px; }
 
-.empty-points { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px; border: 1px dashed var(--border); border-radius: 8px; }
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+.sel-count { font-size: 13px; color: var(--text-secondary); margin-right: 8px; }
+
+.table-view { 
+  border: 1px solid var(--border); 
+  border-radius: 8px; 
+  overflow: hidden; 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+.table-view :deep(.el-table .cell) {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.table-view :deep(.el-table__row) { height: 52px; }
+
+/* Table Height Adjustment */
+.table-view { 
+  border: 1px solid var(--border); 
+  border-radius: 8px; 
+  overflow: hidden; 
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  height: 550px; /* Fixed height for dialog content */
+}
+
+/* Ensure no gap between table and pagination */
+.table-view :deep(.el-table) {
+  flex: 1; 
+  border-bottom: none;
+}
+.table-view :deep(.el-table__inner-wrapper::before) {
+  display: none; 
+}
+
+.pagination-bar {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.code-text { font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); font-size: 13px; }
+.prio-tag { font-weight: 700; border: none; width: 32px; justify-content: center; }
+
+/* Unified Font Styles */
+.module-text {
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.title-text { 
+  font-weight: 400; /* Removed bold */
+  color: var(--text-primary); 
+  font-size: 13px; 
+  
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+}
+
+.desc-text { 
+  white-space: nowrap; 
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #555; 
+  font-size: 13px; 
+  width: 100%;
+  display: block;
+}
+
+.right-actions { display: flex; gap: 8px; }
+.icon-btn { padding: 6px; font-size: 14px; width: 28px; height: 28px; }
+
 .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 
 @media (max-width: 768px) {
