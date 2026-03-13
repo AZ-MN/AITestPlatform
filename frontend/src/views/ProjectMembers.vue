@@ -1,178 +1,442 @@
 <template>
-  <div class="members-page">
+  <div class="members-container">
+    <!-- Header -->
     <div class="page-header">
-      <div>
+      <div class="header-content">
         <h2>项目成员</h2>
-        <div class="sub-title">管理成员角色，保障评审与协作流程稳定运行</div>
+        <p class="subtitle">管理项目成员及其权限角色。</p>
       </div>
-      <el-button type="primary" @click="openAdd">添加成员</el-button>
+      <el-button type="primary" :icon="Plus" @click="openAddDialog">添加成员</el-button>
     </div>
 
-    <div class="overview page-card">
-      <div class="ov-item"><span>成员总数</span><strong>{{ members.length }}</strong></div>
-      <div class="ov-item"><span>管理员</span><strong>{{ adminCount }}</strong></div>
-      <div class="ov-item"><span>测试工程师</span><strong>{{ testerCount }}</strong></div>
-      <div class="ov-item"><span>访客</span><strong>{{ viewerCount }}</strong></div>
+    <!-- Stats Overview -->
+    <div class="stats-overview">
+      <div class="stat-card">
+        <div class="stat-icon bg-blue"><el-icon><UserFilled /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-value">{{ members.length }}</div>
+          <div class="stat-label">成员总数</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-purple"><el-icon><Management /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-value">{{ adminCount }}</div>
+          <div class="stat-label">管理员</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-green"><el-icon><Tools /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-value">{{ testerCount }}</div>
+          <div class="stat-label">测试工程师</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-orange"><el-icon><View /></el-icon></div>
+        <div class="stat-info">
+          <div class="stat-value">{{ viewerCount }}</div>
+          <div class="stat-label">访客</div>
+        </div>
+      </div>
     </div>
 
-    <div class="page-card table-card">
-      <el-table :data="members" v-loading="loading">
-        <el-table-column prop="full_name" label="姓名" min-width="140" />
-        <el-table-column prop="username" label="用户名" width="140" />
-        <el-table-column prop="role" label="角色" width="140">
+    <!-- Members Table -->
+    <div class="content-card">
+      <div class="table-toolbar">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索成员姓名或邮箱..."
+          prefix-icon="Search"
+          style="width: 240px"
+          clearable
+        />
+      </div>
+      
+      <el-table :data="filteredMembers" style="width: 100%" v-loading="loading">
+        <el-table-column label="成员" min-width="200">
           <template #default="{ row }">
-            <el-tag size="small" :type="roleType(row.role)">{{ roleLabel(row.role) }}</el-tag>
+            <div class="user-cell">
+              <el-avatar :size="32" :style="{ backgroundColor: stringToColor(row.username) }">
+                {{ row.full_name?.charAt(0)?.toUpperCase() || row.username?.charAt(0)?.toUpperCase() }}
+              </el-avatar>
+              <div class="user-info">
+                <div class="user-name">{{ row.full_name }}</div>
+                <div class="user-email">{{ row.username }}</div>
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="加入时间" width="180">
-          <template #default="{ row }">{{ fmtDate(row.joined_at) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" align="right">
+        
+        <el-table-column label="角色" width="150">
           <template #default="{ row }">
-            <el-button
-              link
-              type="danger"
-              :disabled="row.user_id === projectStore.current?.created_by"
-              @click="remove(row)"
-            >
-              移除
-            </el-button>
+            <el-tag :type="roleType(row.role)" effect="light" round>
+              {{ roleLabel(row.role) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="加入时间" width="180">
+          <template #default="{ row }">
+            <span class="text-secondary">{{ formatDate(row.joined_at) }}</span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="操作" width="100" align="right">
+          <template #default="{ row }">
+            <el-tooltip content="移除成员" placement="top">
+              <el-button 
+                type="danger" 
+                link 
+                :icon="Delete" 
+                :disabled="isCreator(row)"
+                @click="confirmRemove(row)"
+              />
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <el-dialog v-model="showAdd" title="添加项目成员" width="420px" :close-on-click-modal="false">
-      <el-form :model="form" label-width="90px">
-        <el-form-item label="用户">
-          <el-select v-model="form.user_id" placeholder="选择用户" style="width:100%" filterable>
-            <el-option v-for="u in candidateUsers" :key="u.id" :label="`${u.full_name} (${u.username})`" :value="u.id" />
+    <!-- Add Member Dialog -->
+    <el-dialog
+      v-model="showAddDialog"
+      title="添加成员"
+      width="480px"
+      align-center
+      destroy-on-close
+    >
+      <el-form :model="addForm" label-position="top">
+        <el-form-item label="选择用户">
+          <el-select 
+            v-model="addForm.userId" 
+            placeholder="搜索并选择用户" 
+            filterable 
+            style="width: 100%"
+          >
+            <el-option
+              v-for="user in availableUsers"
+              :key="user.id"
+              :label="user.full_name ? `${user.full_name} (${user.username})` : user.username"
+              :value="user.id"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="form.role" style="width:100%">
-            <el-option label="项目管理员" value="project_admin" />
-            <el-option label="测试工程师" value="tester" />
-            <el-option label="访客" value="viewer" />
-          </el-select>
+        <el-form-item label="分配角色">
+          <el-radio-group v-model="addForm.role" class="role-selector">
+            <el-radio-button label="tester">测试工程师</el-radio-button>
+            <el-radio-button label="project_admin">管理员</el-radio-button>
+            <el-radio-button label="viewer">访客</el-radio-button>
+          </el-radio-group>
+          <div class="role-desc">
+            {{ roleDescription(addForm.role) }}
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showAdd=false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="add">添加</el-button>
+        <div class="dialog-footer">
+          <el-button @click="showAddDialog = false">取消</el-button>
+          <el-button type="primary" :loading="submitting" @click="handleAddMember">
+            添加成员
+          </el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, Delete, UserFilled, Tools, View, Management } from '@element-plus/icons-vue'
+import { useProjectStore } from '@/stores/project'
 import { projectApi } from '@/api/projects'
 import { authApi } from '@/api/auth'
-import { useProjectStore } from '@/stores/project'
 import type { ProjectMember, User } from '@/api/types'
 
 const route = useRoute()
 const projectStore = useProjectStore()
-const projectId = computed(() => Number(route.params.id))
+const projectId = Number(route.params.id)
+
+// State
 const loading = ref(false)
-const saving = ref(false)
-const showAdd = ref(false)
+const submitting = ref(false)
+const showAddDialog = ref(false)
+const searchQuery = ref('')
 const members = ref<ProjectMember[]>([])
-const users = ref<User[]>([])
-const form = reactive({ user_id: undefined as number | undefined, role: 'tester' })
+const allUsers = ref<User[]>([])
+
+const addForm = reactive({
+  userId: undefined as number | undefined,
+  role: 'tester'
+})
+
+// Computed
+const filteredMembers = computed(() => {
+  if (!searchQuery.value) return members.value
+  const q = searchQuery.value.toLowerCase()
+  return members.value.filter(m => 
+    m.full_name?.toLowerCase().includes(q) || 
+    m.username.toLowerCase().includes(q)
+  )
+})
+
 const adminCount = computed(() => members.value.filter(m => m.role === 'project_admin').length)
 const testerCount = computed(() => members.value.filter(m => m.role === 'tester').length)
 const viewerCount = computed(() => members.value.filter(m => m.role === 'viewer').length)
 
-const candidateUsers = computed(() => {
-  const joined = new Set(members.value.map(m => m.user_id))
-  return users.value.filter(u => !joined.has(u.id))
+const availableUsers = computed(() => {
+  const currentMemberIds = new Set(members.value.map(m => m.user_id))
+  return allUsers.value.filter(u => !currentMemberIds.has(u.id))
 })
 
+// Lifecycle
 onMounted(async () => {
-  await projectStore.fetchProject(projectId.value)
-  await load()
+  await loadData()
 })
 
-async function load() {
+// Methods
+async function loadData() {
   loading.value = true
   try {
-    members.value = await projectApi.members(projectId.value)
-    users.value = await authApi.listUsers()
-  } finally { loading.value = false }
+    const [membersData, usersData] = await Promise.all([
+      projectApi.members(projectId),
+      authApi.listUsers()
+    ])
+    members.value = membersData
+    allUsers.value = usersData
+  } catch (e) {
+    ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-function openAdd() {
-  form.user_id = undefined
-  form.role = 'tester'
-  showAdd.value = true
+function openAddDialog() {
+  addForm.userId = undefined
+  addForm.role = 'tester'
+  showAddDialog.value = true
 }
 
-async function add() {
-  if (!form.user_id) return ElMessage.warning('请选择用户')
-  saving.value = true
+async function handleAddMember() {
+  if (!addForm.userId) {
+    ElMessage.warning('请选择一个用户')
+    return
+  }
+  
+  submitting.value = true
   try {
-    await projectApi.addMember(projectId.value, { user_id: form.user_id, role: form.role })
+    await projectApi.addMember(projectId, {
+      user_id: addForm.userId,
+      role: addForm.role
+    })
     ElMessage.success('成员添加成功')
-    showAdd.value = false
-    await load()
-  } finally { saving.value = false }
+    showAddDialog.value = false
+    loadData()
+  } catch (e) {
+    ElMessage.error('添加失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
-async function remove(member: ProjectMember) {
-  await ElMessageBox.confirm(`确认移除成员「${member.full_name}」？`, '移除确认', {
-    type: 'warning',
-    closeOnClickModal: false,
-    closeOnPressEscape: false,
-  })
-  await projectApi.removeMember(projectId.value, member.id)
-  ElMessage.success('成员已移除')
-  await load()
+async function confirmRemove(member: ProjectMember) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要移除成员 "${member.full_name || member.username}" 吗？`,
+      '移除成员',
+      {
+        type: 'warning',
+        confirmButtonText: '移除',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    await projectApi.removeMember(projectId, member.id)
+    ElMessage.success('成员已移除')
+    loadData()
+  } catch (e) {
+    // Cancelled
+  }
 }
 
-function fmtDate(s: string) {
-  return new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+// Helpers
+function isCreator(member: ProjectMember) {
+  // Assuming current project creator cannot be removed (logic from original file)
+  return member.user_id === projectStore.current?.created_by
 }
 
 function roleLabel(role: string) {
-  return ({ project_admin: '项目管理员', tester: '测试工程师', viewer: '访客' } as Record<string, string>)[role] || role
+  const map: Record<string, string> = {
+    project_admin: '管理员',
+    tester: '测试工程师',
+    viewer: '访客'
+  }
+  return map[role] || role
 }
 
-function roleType(role: string): 'success' | 'warning' | 'info' {
-  return ({ project_admin: 'success', tester: 'warning', viewer: 'info' } as Record<string, 'success' | 'warning' | 'info'>)[role] || 'info'
+function roleType(role: string): any {
+  const map: Record<string, string> = {
+    project_admin: 'danger',
+    tester: 'primary',
+    viewer: 'info'
+  }
+  return map[role] || 'info'
+}
+
+function roleDescription(role: string) {
+  const map: Record<string, string> = {
+    project_admin: '拥有项目的所有权限，包括成员管理、项目设置等。',
+    tester: '可以管理需求、生成和执行测试用例。',
+    viewer: '仅拥有查看权限，无法修改任何数据。'
+  }
+  return map[role] || ''
+}
+
+function formatDate(iso: string) {
+  if (!iso) return '-'
+  return new Date(iso).toLocaleDateString()
+}
+
+function stringToColor(str: string) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const c = (hash & 0x00ffffff).toString(16).toUpperCase()
+  return '#' + '00000'.substring(0, 6 - c.length) + c
 }
 </script>
 
 <style scoped>
-.members-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
-.sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
-.overview {
-  margin-bottom: 12px;
+.members-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+.page-header h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Stats Overview */
+.stats-overview {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 12px;
+  gap: 24px;
+  margin-bottom: 32px;
 }
-.ov-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fafbfc;
-  padding: 10px 12px;
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #6b7280;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
 }
-.ov-item strong { font-size: 20px; color: #111827; }
-.table-card { flex: 1; min-height: 0; display: flex; overflow: hidden; }
-.table-card :deep(.el-table) { height: 100%; }
-@media (max-width: 900px) {
-  .overview { grid-template-columns: repeat(2, 1fr); }
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+}
+.bg-blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
+.bg-purple { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+.bg-green { background: linear-gradient(135deg, #34d399, #10b981); }
+.bg-orange { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Content Card */
+.content-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+.table-toolbar {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.user-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.role-selector {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.role-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+@media (max-width: 992px) {
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 576px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

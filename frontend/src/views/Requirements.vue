@@ -1,9 +1,10 @@
 <template>
-  <div class="req-page">
+  <div class="req-container">
+    <!-- Header -->
     <div class="page-header">
-      <div>
+      <div class="header-content">
         <h2>需求管理</h2>
-        <div class="sub-title">上传或录入需求后在当前模块完成查看与编辑</div>
+        <p class="subtitle">集中管理项目需求文档，支持 AI 智能解析与结构化预览。</p>
       </div>
       <div class="header-actions">
         <el-button :icon="Upload" @click="showUpload = true">上传文档</el-button>
@@ -11,103 +12,139 @@
       </div>
     </div>
 
-    <div class="req-overview page-card">
-      <div class="ov-item">
-        <div class="ov-label">需求总数</div>
-        <div class="ov-value">{{ requirements.length }}</div>
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">需求总数</span>
+        <span class="stat-value">{{ requirements.length }}</span>
       </div>
-      <div class="ov-item">
-        <div class="ov-label">已解析</div>
-        <div class="ov-value">{{ parsedCount }}</div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">已解析</span>
+        <span class="stat-value success">{{ parsedCount }}</span>
       </div>
-      <div class="ov-item">
-        <div class="ov-label">解析中/失败</div>
-        <div class="ov-value">{{ pendingCount }}/{{ failedCount }}</div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">解析中/失败</span>
+        <span class="stat-value warning">{{ pendingCount }} / {{ failedCount }}</span>
       </div>
-      <div class="ov-item">
-        <div class="ov-label">需求点总数</div>
-        <div class="ov-value">{{ pointsTotal }}</div>
-      </div>
-    </div>
-
-    <!-- 需求列表 -->
-    <div v-if="!loading && requirements.length === 0" class="empty-state">
-      <div class="empty-icon">📄</div>
-      <h3>暂无需求</h3>
-      <p>上传需求文档或手动输入需求，平台将自动解析需求点用于生成测试用例</p>
-      <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
-        <el-button type="primary" @click="showUpload = true">上传文档</el-button>
-        <el-button @click="showText = true">手动输入</el-button>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">需求点总数</span>
+        <span class="stat-value primary">{{ pointsTotal }}</span>
       </div>
     </div>
 
-    <div v-else class="page-card table-card">
-      <el-table v-loading="loading" :data="requirements" row-class-name="req-row" @row-click="handleReqRowClick">
-        <el-table-column label="需求标题" prop="title" min-width="200" show-overflow-tooltip />
-        <el-table-column label="来源" width="90">
+    <!-- Requirements Table -->
+    <div class="table-container">
+      <div v-if="!loading && requirements.length === 0" class="empty-state">
+        <el-icon class="empty-icon"><Document /></el-icon>
+        <h3>暂无需求文档</h3>
+        <p>上传文档或手动录入，AI 将自动为您解析需求点。</p>
+        <div class="empty-actions">
+          <el-button type="primary" @click="showUpload = true">上传文档</el-button>
+          <el-button @click="showText = true">手动输入</el-button>
+        </div>
+      </div>
+
+      <el-table
+        v-else
+        v-loading="loading"
+        :data="requirements"
+        stripe
+        height="100%"
+        @row-click="handleReqRowClick"
+        class="req-table"
+      >
+        <el-table-column label="需求标题" prop="title" min-width="240" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag size="small" :type="row.source_type === 'file' ? 'primary' : 'success'">
+            <span class="req-title-cell">{{ row.title }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="来源" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.source_type === 'file' ? 'primary' : 'info'" effect="light" round>
               {{ row.source_type === 'file' ? '文档' : '手动' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="需求点数" width="90" align="center">
+        <el-table-column label="需求点" width="100" align="center">
           <template #default="{ row }">
-            <el-tag size="small" type="warning">{{ row.req_points_count }}</el-tag>
+            <span class="points-badge">{{ row.req_points_count || 0 }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column label="状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'parsed' ? 'success' : row.status === 'parsing' ? 'warning' : 'danger'" size="small">
-              {{ ({'parsed':'已解析', 'parsing':'解析中', 'failed':'失败'} as Record<string,string>)[row.status] || row.status }}
-            </el-tag>
+             <div class="status-indicator">
+                <span :class="['status-dot', row.status]"></span>
+                {{ statusLabel(row.status) }}
+             </div>
           </template>
         </el-table-column>
-        <el-table-column label="创建人" prop="creator_name" width="100" />
-        <el-table-column label="创建时间" width="160">
-          <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
+        <el-table-column label="创建人" prop="creator_name" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="creator-text">{{ row.creator_name || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="160" align="right">
+          <template #default="{ row }">
+            <span class="time-text">{{ fmtDate(row.created_at) }}</span>
+          </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <!-- 上传文档弹窗 -->
-    <el-dialog v-model="showUpload" title="上传需求文档" width="500px" :close-on-click-modal="false">
-      <el-form :model="uploadForm" label-width="90px">
-        <el-form-item label="需求标题">
-          <el-input v-model="uploadForm.title" placeholder="如：用户中心 V2.0 需求" />
+    <!-- Upload Dialog -->
+    <el-dialog v-model="showUpload" title="上传需求文档" width="480px" align-center destroy-on-close>
+      <el-form :model="uploadForm" label-position="top">
+        <el-form-item label="需求标题" required>
+          <el-input v-model="uploadForm.title" placeholder="例如：用户中心 V2.0 PRD" />
         </el-form-item>
-        <el-form-item label="需求文档">
-          <el-upload drag :before-upload="beforeUpload" :on-change="onFileChange" :auto-upload="false"
-            accept=".pdf,.docx,.doc,.xlsx,.xls,.md,.txt" :limit="1">
+        <el-form-item label="文档文件" required>
+          <el-upload
+            drag
+            action="#"
+            :before-upload="beforeUpload"
+            :on-change="onFileChange"
+            :auto-upload="false"
+            accept=".pdf,.docx,.doc,.xlsx,.xls,.md,.txt"
+            :limit="1"
+            class="upload-area"
+          >
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">拖拽或 <em>点击上传</em></div>
+            <div class="el-upload__text">拖拽文件到此处或 <em>点击上传</em></div>
             <template #tip>
-              <div class="el-upload__tip">支持 PDF / Word / Excel / Markdown / TXT，最大 500MB</div>
+              <div class="el-upload__tip">支持 PDF, Word, Excel, Markdown, TXT (Max 50MB)</div>
             </template>
           </el-upload>
         </el-form-item>
-        <el-form-item label="AI解析">
-          <el-switch v-model="uploadForm.useAi" active-text="AI智能解析需求点" inactive-text="规则解析" />
+        <el-form-item>
+           <el-checkbox v-model="uploadForm.useAi">启用 AI 智能解析 (推荐)</el-checkbox>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showUpload = false">取消</el-button>
-        <el-button type="primary" :loading="uploading" @click="handleUpload">上传并解析</el-button>
+        <el-button type="primary" :loading="uploading" @click="handleUpload">开始解析</el-button>
       </template>
     </el-dialog>
 
-    <!-- 手动输入弹窗 -->
-    <el-dialog v-model="showText" title="手动输入需求" width="600px" :close-on-click-modal="false">
-      <el-form :model="textForm" label-width="90px">
-        <el-form-item label="需求标题">
+    <!-- Manual Input Dialog -->
+    <el-dialog v-model="showText" title="手动录入需求" width="600px" align-center destroy-on-close>
+      <el-form :model="textForm" label-position="top">
+        <el-form-item label="需求标题" required>
           <el-input v-model="textForm.title" placeholder="需求标题" />
         </el-form-item>
-        <el-form-item label="需求内容">
-          <el-input v-model="textForm.content" type="textarea" :rows="10"
-            placeholder="粘贴需求文档内容，或直接描述需求..." />
+        <el-form-item label="需求内容" required>
+          <el-input
+            v-model="textForm.content"
+            type="textarea"
+            :rows="12"
+            placeholder="请粘贴需求文本..."
+            resize="none"
+          />
         </el-form-item>
-        <el-form-item label="AI解析">
-          <el-switch v-model="textForm.useAi" active-text="AI智能解析需求点" />
+        <el-form-item>
+           <el-checkbox v-model="textForm.useAi">启用 AI 智能解析 (推荐)</el-checkbox>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -116,50 +153,48 @@
       </template>
     </el-dialog>
 
-    <!-- 需求点查看抽屉 -->
-    <el-drawer v-model="showPoints" :title="`需求点 - ${currentReq?.title}`" size="760px" :close-on-click-modal="true">
-      <div class="points-toolbar">
-        <span class="points-count">共 {{ currentPoints.length }} 个需求点</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <el-tooltip :content="editingReq ? '取消编辑' : '编辑需求'" placement="top">
-            <el-button text circle @click="toggleEditReq">
-              <el-icon><Edit /></el-icon>
-            </el-button>
-          </el-tooltip>
-          <el-tooltip content="删除需求" placement="top">
-            <el-button text circle type="danger" @click="deleteCurrentReq">
-              <el-icon><Delete /></el-icon>
-            </el-button>
-          </el-tooltip>
+    <!-- Detail Drawer -->
+    <el-drawer v-model="showPoints" :title="currentReq?.title || '需求详情'" size="600px" class="detail-drawer">
+      <div class="drawer-content">
+        <div class="drawer-header-actions">
+           <div class="meta-info">
+             <span class="meta-label">包含 {{ currentPoints.length }} 个需求点</span>
+           </div>
+           <div class="actions">
+             <el-button v-if="!editingReq" :icon="Edit" circle @click="toggleEditReq" />
+             <el-button :icon="Delete" circle type="danger" plain @click="deleteCurrentReq" />
+           </div>
         </div>
-      </div>
-      <div v-if="editingReq" class="req-edit-form">
-        <el-form label-width="90px">
-          <el-form-item label="需求标题">
-            <el-input v-model="editingTitle" />
-          </el-form-item>
-          <el-form-item label="需求点JSON">
-            <el-input v-model="editingPointsJson" type="textarea" :rows="16" />
-          </el-form-item>
-        </el-form>
-      </div>
-      <div v-else class="points-list">
-        <div v-for="(p, i) in currentPoints" :key="i" class="point-item">
-          <div class="point-header">
-            <span class="point-id">{{ p.id || `REQ-${i+1}` }}</span>
-            <el-tag :class="`tag-${p.priority?.toLowerCase()}`" size="small">{{ p.priority }}</el-tag>
-            <span class="point-module">{{ p.module }}</span>
-          </div>
-          <div class="point-title">{{ p.title }}</div>
-          <div class="point-desc">{{ p.description }}</div>
-          <div v-if="p.rules?.length" class="point-rules">
-            <span v-for="r in p.rules" :key="r" class="rule-tag">{{ r }}</span>
-          </div>
+
+        <div v-if="editingReq" class="edit-mode">
+          <el-form label-position="top">
+             <el-form-item label="标题"><el-input v-model="editingTitle" /></el-form-item>
+             <el-form-item label="需求点 JSON 数据">
+               <el-input v-model="editingPointsJson" type="textarea" :rows="20" />
+             </el-form-item>
+             <div class="form-actions">
+               <el-button @click="toggleEditReq">取消</el-button>
+               <el-button type="primary" :loading="savingReqEdit" @click="saveReqEdit">保存修改</el-button>
+             </div>
+          </el-form>
         </div>
-      </div>
-      <div class="points-actions">
-        <el-button v-if="editingReq" @click="toggleEditReq">取消</el-button>
-        <el-button v-if="editingReq" type="primary" :loading="savingReqEdit" @click="saveReqEdit">保存需求</el-button>
+
+        <div v-else class="points-list">
+           <div v-for="(p, i) in currentPoints" :key="i" class="point-card">
+              <div class="point-head">
+                 <span class="point-idx">{{ p.id || `#${i+1}` }}</span>
+                 <el-tag size="small" :type="priorityType(p.priority)">{{ p.priority || 'P1' }}</el-tag>
+                 <span class="point-mod">{{ p.module || '通用' }}</span>
+              </div>
+              <div class="point-body">
+                 <div class="point-t">{{ p.title }}</div>
+                 <div class="point-d">{{ p.description }}</div>
+              </div>
+           </div>
+           <div v-if="!currentPoints.length" class="empty-points">
+              未解析出需求点，请检查文档内容或尝试重新解析。
+           </div>
+        </div>
       </div>
     </el-drawer>
   </div>
@@ -168,13 +203,15 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Plus, Upload, Delete, Edit } from '@element-plus/icons-vue'
+import { Plus, Upload, Delete, Edit, Document, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requirementApi } from '@/api/requirements'
 import type { Requirement, RequirementPoint } from '@/api/types'
 
 const route = useRoute()
 const projectId = computed(() => Number(route.params.id))
+
+// State
 const requirements = ref<Requirement[]>([])
 const loading = ref(false)
 const uploading = ref(false)
@@ -183,7 +220,6 @@ const showUpload = ref(false)
 const showText = ref(false)
 const showPoints = ref(false)
 const currentReq = ref<Requirement | null>(null)
-const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
 const editingReq = ref(false)
 const savingReqEdit = ref(false)
 const editingTitle = ref('')
@@ -192,13 +228,18 @@ const uploadFile = ref<File | null>(null)
 
 const uploadForm = reactive({ title: '', useAi: true })
 const textForm = reactive({ title: '', content: '', useAi: true })
+
+// Computed
+const currentPoints = computed<RequirementPoint[]>(() => (currentReq.value?.parse_result as RequirementPoint[]) || [])
 const parsedCount = computed(() => requirements.value.filter(r => r.status === 'parsed').length)
 const pendingCount = computed(() => requirements.value.filter(r => r.status === 'parsing').length)
 const failedCount = computed(() => requirements.value.filter(r => r.status === 'failed').length)
 const pointsTotal = computed(() => requirements.value.reduce((s, r) => s + (r.req_points_count || 0), 0))
 
+// Lifecycle
 onMounted(fetchReqs)
 
+// Actions
 async function fetchReqs() {
   loading.value = true
   try { requirements.value = await requirementApi.list(projectId.value) }
@@ -210,36 +251,46 @@ function onFileChange(file: any) { uploadFile.value = file.raw }
 
 async function handleUpload() {
   if (!uploadFile.value) return ElMessage.warning('请选择文件')
-  if (!uploadForm.title) return ElMessage.warning('请输入需求标题')
+  if (!uploadForm.title) return ElMessage.warning('请输入标题')
   uploading.value = true
+  
   const fd = new FormData()
   fd.append('file', uploadFile.value)
   fd.append('project_id', String(projectId.value))
   fd.append('title', uploadForm.title)
   fd.append('use_ai', String(uploadForm.useAi))
+  
   try {
     await requirementApi.upload(fd)
-    ElMessage.success('上传解析成功')
+    ElMessage.success('上传成功，正在解析...')
     showUpload.value = false
     uploadForm.title = ''
     uploadFile.value = null
     fetchReqs()
-  } finally { uploading.value = false }
+  } catch(e) { ElMessage.error('上传失败') }
+  finally { uploading.value = false }
 }
 
 async function handleTextSave() {
-  if (!textForm.title) return ElMessage.warning('请输入需求标题')
+  if (!textForm.title) return ElMessage.warning('请输入标题')
   saving.value = true
   try {
     await requirementApi.createText(
       { project_id: projectId.value, title: textForm.title, content: textForm.content },
       textForm.useAi
     )
-    ElMessage.success('需求解析成功')
+    ElMessage.success('已保存并开始解析')
     showText.value = false
-    Object.assign(textForm, { title: '', content: '', useAi: true })
+    textForm.title = ''
+    textForm.content = ''
     fetchReqs()
-  } finally { saving.value = false }
+  } catch(e) { ElMessage.error('保存失败') }
+  finally { saving.value = false }
+}
+
+function handleReqRowClick(row: Requirement, column: any) {
+  if (column?.type === 'selection') return
+  viewReq(row)
 }
 
 function viewReq(req: Requirement) {
@@ -250,26 +301,15 @@ function viewReq(req: Requirement) {
   showPoints.value = true
 }
 
-function handleReqRowClick(row: Requirement, column: any) {
-  if (column?.type === 'selection') return
-  viewReq(row)
-}
-
-async function deleteReq(req: Requirement) {
-  await ElMessageBox.confirm(`确认删除需求「${req.title}」？`, '删除确认', {
-    type: 'warning',
-    closeOnClickModal: false,
-    closeOnPressEscape: false,
-  })
-  await requirementApi.remove(req.id)
-  ElMessage.success('删除成功')
-  fetchReqs()
-}
-
 async function deleteCurrentReq() {
   if (!currentReq.value) return
-  await deleteReq(currentReq.value)
-  showPoints.value = false
+  try {
+    await ElMessageBox.confirm('确定删除该需求文档吗？', '删除确认', { type: 'warning' })
+    await requirementApi.remove(currentReq.value.id)
+    ElMessage.success('删除成功')
+    showPoints.value = false
+    fetchReqs()
+  } catch(e) {}
 }
 
 function toggleEditReq() {
@@ -284,12 +324,9 @@ function toggleEditReq() {
 async function saveReqEdit() {
   if (!currentReq.value) return
   let parsed: RequirementPoint[] = []
-  try {
-    parsed = JSON.parse(editingPointsJson.value || '[]')
-  } catch {
-    ElMessage.error('需求点 JSON 格式错误')
-    return
-  }
+  try { parsed = JSON.parse(editingPointsJson.value || '[]') }
+  catch { return ElMessage.error('JSON 格式错误') }
+  
   savingReqEdit.value = true
   try {
     const updated = await requirementApi.update(currentReq.value.id, {
@@ -298,68 +335,120 @@ async function saveReqEdit() {
       status: 'parsed',
     })
     currentReq.value = updated
-    await fetchReqs()
+    fetchReqs()
     editingReq.value = false
-    ElMessage.success('需求已更新')
-  } finally {
-    savingReqEdit.value = false
-  }
+    ElMessage.success('更新成功')
+  } catch(e) { ElMessage.error('更新失败') }
+  finally { savingReqEdit.value = false }
 }
 
-function fmtDate(s: string) {
-  return new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
-}
+// Helpers
+const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
+const statusLabel = (s: string) => ({parsed:'已解析', parsing:'解析中', failed:'失败'})[s] || s
+const priorityType = (p: string): any => ({P0:'danger', P1:'warning', P2:'primary'})[p] || 'info'
 </script>
 
 <style scoped>
-.req-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
-.sub-title { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
-.header-actions { display: flex; gap: 8px; }
-.req-overview {
-  margin-bottom: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 12px;
-}
-.ov-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #fafbfc; }
-.ov-label { font-size: 12px; color: #6b7280; }
-.ov-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
-.table-card { padding: 0; overflow: hidden; }
-.table-card { flex: 1; min-height: 0; display: flex; }
-.table-card :deep(.el-table) { height: 100%; }
-.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
-
-.empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; border: 1px solid var(--border); }
-.empty-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-state h3 { font-size: 18px; margin-bottom: 8px; }
-.empty-state p { color: var(--text-secondary); font-size: 14px; }
-
-:deep(.req-row) { cursor: pointer; }
-
-.points-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.points-count { font-size: 13px; color: var(--text-secondary); }
-.points-list { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-.req-edit-form { padding-top: 8px; }
-.points-actions {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+.req-container {
+  height: 100%;
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 100%;
 }
-.point-item { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-.point-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.point-id { font-size: 11px; color: #9ca3af; font-family: monospace; }
-.point-module { font-size: 11px; color: #9ca3af; }
-.point-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
-.point-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-.point-rules { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.rule-tag { font-size: 11px; background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 4px; }
-@media (max-width: 900px) {
-  .req-overview { grid-template-columns: repeat(2, 1fr); }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-shrink: 0;
+}
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.subtitle { color: var(--text-secondary); font-size: 14px; }
+
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+.stat-item { display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; }
+.stat-value { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.stat-value.success { color: #10b981; }
+.stat-value.warning { color: #f59e0b; }
+.stat-value.primary { color: var(--primary); }
+.stat-divider { width: 1px; height: 24px; background: var(--border); margin: 0 24px; }
+
+/* Table */
+.table-container {
+  flex: 1;
+  min-height: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.req-table { width: 100%; }
+.req-table :deep(.el-table__row) { cursor: pointer; }
+
+.req-title-cell { font-weight: 600; color: var(--text-primary); }
+.points-badge { 
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #f1f5f9; color: #475569; border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 600;
+}
+
+.status-indicator { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #9ca3af; }
+.status-dot.parsed { background: #10b981; }
+.status-dot.parsing { background: #f59e0b; }
+.status-dot.failed { background: #ef4444; }
+
+.creator-text, .time-text { font-size: 13px; color: var(--text-secondary); }
+
+/* Empty State */
+.empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+.empty-actions { margin-top: 24px; display: flex; gap: 12px; }
+
+/* Drawer & Points */
+.drawer-content { padding: 20px; }
+.drawer-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+.meta-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+
+.points-list { display: flex; flex-direction: column; gap: 16px; }
+.point-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.point-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.point-idx { font-family: monospace; font-size: 12px; color: var(--text-secondary); }
+.point-mod { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.point-t { font-weight: 700; color: var(--text-primary); margin-bottom: 4px; font-size: 15px; }
+.point-d { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+.empty-points { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px; border: 1px dashed var(--border); border-radius: 8px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+
+@media (max-width: 768px) {
+  .stats-bar { display: none; }
 }
 </style>

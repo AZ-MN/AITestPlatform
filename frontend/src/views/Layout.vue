@@ -130,104 +130,150 @@ async function handleCommand(cmd: string) {
 </script>
 
 <style scoped>
-.app-layout { height: 100vh; overflow: hidden; }
+.app-layout { 
+  height: 100vh; 
+  overflow: hidden; 
+  background: var(--bg);
+  display: flex;
+}
 
+/* Sidebar Styles */
 .sidebar {
-  background: #1a1c2e;
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
   display: flex;
   flex-direction: column;
-  transition: width .2s;
+  transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
+  z-index: 20;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.1);
 }
+
 .sidebar-header {
-  height: 56px;
+  height: 64px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  gap: 12px;
+  padding: 0 20px;
   flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-.logo-icon { font-size: 24px; flex-shrink: 0; }
-.logo-text { color: #fff; font-size: 15px; font-weight: 700; white-space: nowrap; }
+.logo-icon { 
+  font-size: 24px; 
+  flex-shrink: 0; 
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+.logo-text { 
+  color: #fff; 
+  font-size: 16px; 
+  font-weight: 700; 
+  letter-spacing: -0.01em;
+  white-space: nowrap; 
+}
 
-.sidebar-menu { border: none; background: transparent; flex: 1; overflow-y: auto; }
-:deep(.el-menu-item), :deep(.el-sub-menu__title) {
-  color: rgba(255,255,255,.7) !important;
-  border-radius: 8px;
-  margin: 2px 8px;
+.sidebar-menu { 
+  border: none; 
+  background: transparent; 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 16px 8px;
 }
-:deep(.el-menu-item:hover), :deep(.el-sub-menu__title:hover) {
-  background: rgba(255,255,255,.08) !important;
-  color: #fff !important;
+:deep(.el-menu-item) {
+  color: #94a3b8 !important;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  height: 44px;
+  line-height: 44px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+:deep(.el-menu-item:hover) {
+  background: rgba(255,255,255,0.08) !important;
+  color: #f8fafc !important;
 }
 :deep(.el-menu-item.is-active) {
-  background: #4f6ef7 !important;
+  background: rgba(79, 70, 229, 0.9) !important;
   color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
-:deep(.el-sub-menu .el-menu-item) { padding-left: 44px !important; }
+:deep(.el-menu-item .el-icon) { font-size: 18px; margin-right: 10px; }
 
 .sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
-.collapse-btn {
-  color: rgba(255,255,255,.5);
-  cursor: pointer;
-  font-size: 18px;
-  padding: 4px;
+
+/* Main Container */
+.main-container { 
+  flex: 1;
+  display: flex; 
+  flex-direction: column; 
+  min-width: 0;
+  background: var(--bg);
+  position: relative;
 }
-.collapse-btn:hover { color: #fff; }
 
-.main-container { overflow: hidden; min-width: 0; }
-
+/* Floating Header */
 .app-header {
-  height: 56px;
+  height: 64px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid var(--border);
   padding: 0 24px;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
 }
+.header-left { display: flex; align-items: center; gap: 16px; }
+
 .header-right .user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
+  padding: 4px 12px 4px 4px;
+  border-radius: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: var(--transition);
 }
-.username { font-size: 14px; color: #374151; }
+.header-right .user-info:hover { 
+  background: rgba(255,255,255,0.8);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm); 
+}
 
+.username { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+/* Content Area */
 .app-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 80px 24px 24px 24px; /* Header height + spacing */
   background: var(--bg);
-  overflow: hidden;
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
-.app-main :deep(.dashboard),
-.app-main :deep(.projects-page),
-.app-main :deep(.req-page),
-.app-main :deep(.generate-page),
-.app-main :deep(.case-library),
-.app-main :deep(.settings-page),
-.app-main :deep(.profile-page) {
+/* Page Transition */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.fade-enter-from { opacity: 0; transform: translateY(10px); }
+.fade-leave-to { opacity: 0; transform: translateY(-10px); }
+
+/* Remove centralized constraints - let views control their own layout */
+.app-main :deep(> div) {
   width: 100%;
-  max-width: none !important;
+  height: 100%;
 }
 
 @media (max-width: 1200px) {
-  .app-header { padding: 0 16px; }
-  .app-main { padding: 16px; }
-}
-
-@media (max-width: 768px) {
-  .app-header { padding: 0 12px; }
-  .app-main { padding: 12px; }
-  .username { display: none; }
+  .app-header, .app-main { padding-left: 24px; padding-right: 24px; }
 }
 </style>

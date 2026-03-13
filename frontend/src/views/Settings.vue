@@ -1,120 +1,154 @@
 <template>
-  <div class="settings-page">
+  <div class="settings-container">
     <div class="page-header">
-      <h2>AI 模型设置</h2>
-      <el-button type="primary" :icon="Plus" @click="openAdd">添加模型配置</el-button>
+      <div class="header-content">
+        <h2>模型设置</h2>
+        <p class="subtitle">配置 AI 模型连接参数，管理您的生成能力。</p>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="openAdd">添加模型</el-button>
     </div>
 
-    <!-- 供应商说明 -->
-    <el-alert type="info" :closable="false" style="margin-bottom:16px">
-      <template #title>
-        配置 AI 模型 API Key 后，即可在「智能生成」页面使用对应模型生成测试用例。
-        至少配置一个模型方可使用生成功能。
-      </template>
-    </el-alert>
+    <div class="settings-layout">
+      <!-- Main Content: Models Grid -->
+      <div class="main-column">
+        <div class="models-grid">
+          <div v-for="cfg in configs" :key="cfg.id" class="model-card">
+            <div class="card-header">
+              <div class="provider-logo" :class="`provider-${cfg.provider}`">
+                {{ providerIcon(cfg.provider) }}
+              </div>
+              <div class="model-info">
+                <div class="model-name-row">
+                  <span class="model-name" :title="cfg.model_name">{{ cfg.model_name }}</span>
+                  <el-tag v-if="cfg.is_default" size="small" effect="dark" type="success" class="default-tag">默认</el-tag>
+                </div>
+                <div class="provider-name">{{ providerLabel(cfg.provider) }}</div>
+              </div>
+              <div class="card-actions">
+                <el-dropdown trigger="click" @command="(c) => handleCommand(c, cfg)">
+                  <el-button link class="more-btn"><el-icon><MoreFilled /></el-icon></el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="test" :icon="Promotion">连通性测试</el-dropdown-item>
+                      <el-dropdown-item command="edit" :icon="Edit">编辑配置</el-dropdown-item>
+                      <el-dropdown-item command="delete" :icon="Delete" divided class="text-danger">删除配置</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+            
+            <div class="card-body">
+              <div class="stat-row">
+                <span class="stat-label">Temperature</span>
+                <span class="stat-val">{{ cfg.temperature }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Max Tokens</span>
+                <span class="stat-val">{{ cfg.max_tokens }}</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">状态</span>
+                <span class="stat-val">
+                  <span class="status-dot" :class="{ active: cfg.is_active }"></span>
+                  {{ cfg.is_active ? '已启用' : '禁用' }}
+                </span>
+              </div>
+            </div>
+          </div>
 
-    <!-- 已配置的模型 -->
-    <div class="model-grid">
-      <div v-for="cfg in configs" :key="cfg.id" class="model-card page-card">
-        <div class="model-card-header">
-          <div class="provider-badge" :style="{ background: providerColor(cfg.provider) }">
-            {{ providerIcon(cfg.provider) }}
+          <!-- Add New Card -->
+          <div class="add-card" @click="openAdd">
+            <div class="add-icon"><el-icon><Plus /></el-icon></div>
+            <span class="add-text">配置新模型</span>
           </div>
-          <div class="model-main">
-            <el-tooltip :content="cfg.model_name" placement="top">
-              <div class="model-name">{{ cfg.model_name }}</div>
-            </el-tooltip>
-            <div class="provider-name">{{ providerLabel(cfg.provider) }} · 用例生成模型</div>
+        </div>
+      </div>
+
+      <!-- Side Column: Info & Providers -->
+      <div class="side-column">
+        <!-- Info Card -->
+        <div class="info-card">
+          <div class="info-header">
+            <el-icon class="info-icon"><InfoFilled /></el-icon>
+            <h4>配置说明</h4>
           </div>
-          <div class="model-header-right" @click.stop>
-            <el-tag v-if="cfg.is_default" type="success" size="small">默认</el-tag>
-            <div class="model-actions">
-              <el-tooltip content="连通性测试" placement="top">
-                <el-button circle text :loading="testingId === cfg.id" @click="testModel(cfg)">
-                  <el-icon v-if="testingId !== cfg.id"><Promotion /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="编辑模型" placement="top">
-                <el-button circle text @click="editConfig(cfg)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="删除模型" placement="top">
-                <el-button circle text type="danger" @click="removeConfig(cfg)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
+          <p class="info-text">
+            配置 API Key 后即可启用 AI 生成功能。建议至少配置一个模型（如 OpenAI、Claude 或 DeepSeek）以保证生成质量。
+          </p>
+        </div>
+
+        <!-- Providers List -->
+        <div class="providers-section">
+          <h3>支持的供应商</h3>
+          <div class="providers-list">
+            <div v-for="p in providers" :key="p.id" class="provider-item">
+              <span class="p-icon">{{ providerIcon(p.id) }}</span>
+              <div class="p-details">
+                <div class="p-name">{{ p.name }}</div>
+                <div class="p-models">{{ p.models.length }} 个预设模型</div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="model-meta">
-          <el-tooltip content="温度参数" placement="top">
-            <div class="meta-item"><em>🌡️</em><strong>{{ cfg.temperature }}</strong></div>
-          </el-tooltip>
-          <el-tooltip content="最大令牌数" placement="top">
-            <div class="meta-item"><em>🧾</em><strong>{{ cfg.max_tokens }}</strong></div>
-          </el-tooltip>
-          <el-tooltip content="模型状态" placement="top">
-            <div class="meta-item"><em>⚙️</em><strong>{{ cfg.is_active ? '启用' : '禁用' }}</strong></div>
-          </el-tooltip>
-        </div>
-      </div>
-
-      <div class="add-model-card" @click="openAdd">
-        <el-icon :size="32"><Plus /></el-icon>
-        <span>添加新模型</span>
       </div>
     </div>
 
-    <!-- 支持的供应商 -->
-    <div class="providers-section page-card" style="margin-top:20px">
-      <h3>支持的 AI 供应商</h3>
-      <div class="providers-grid">
-        <div v-for="p in providers" :key="p.id" class="provider-item">
-          <div class="provider-icon-lg" :style="{ background: providerColor(p.id) }">
-            {{ providerIcon(p.id) }}
-          </div>
-          <div>
-            <div class="provider-item-name">{{ p.name }}</div>
-            <div class="provider-models">{{ p.models.join(' / ') }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 添加/编辑弹窗 -->
-    <el-dialog v-model="showDialog" :title="editId ? '编辑模型配置' : '添加模型配置'" width="520px" :close-on-click-modal="false">
-      <el-form ref="formRef" :model="form" label-width="110px">
-        <el-form-item label="供应商" prop="provider" :rules="[{ required: true, message: '请选择供应商', trigger: 'change' }]">
+    <!-- Edit Dialog -->
+    <el-dialog 
+      v-model="showDialog" 
+      :title="editId ? '编辑模型' : '添加模型'" 
+      width="500px" 
+      align-center
+      destroy-on-close
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+        <el-form-item label="供应商" prop="provider">
           <el-select v-model="form.provider" placeholder="选择供应商" style="width:100%" @change="onProviderChange">
-            <el-option v-for="p in providers" :key="p.id" :value="p.id" :label="p.name" />
+            <el-option v-for="p in providers" :key="p.id" :value="p.id" :label="p.name">
+              <span style="float: left">{{ p.name }}</span>
+              <span style="float: right; color: var(--text-secondary); font-size: 12px">{{ providerIcon(p.id) }}</span>
+            </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="模型" prop="model_name" :rules="[{ required: true, message: '请选择或输入模型名称', trigger: 'change' }]">
-          <el-select v-model="form.model_name" placeholder="选择模型" style="width:100%" allow-create filterable>
+        
+        <el-form-item label="模型名称" prop="model_name">
+          <el-select 
+            v-model="form.model_name" 
+            placeholder="选择或输入模型名称" 
+            style="width:100%" 
+            allow-create 
+            filterable 
+            default-first-option
+          >
             <el-option v-for="m in currentModels" :key="m" :value="m" :label="m" />
           </el-select>
         </el-form-item>
-        <el-form-item label="API 密钥">
-          <el-input v-model="form.api_key" type="password" show-password placeholder="请输入模型密钥（可选）" />
+        
+        <el-form-item label="API Key" prop="api_key">
+          <el-input v-model="form.api_key" type="password" show-password placeholder="输入 API 密钥" />
         </el-form-item>
-        <el-form-item label="接口地址">
-          <el-input v-model="form.api_base_url" placeholder="可选，留空则使用默认地址" />
+        
+        <el-form-item label="API Base URL (可选)">
+          <el-input v-model="form.api_base_url" placeholder="默认使用官方地址，无需修改" />
         </el-form-item>
-        <el-form-item label="温度参数">
-          <el-input-number v-model.number="form.temperature_num" :min="0" :max="1" :step="0.1" :precision="1" />
-          <span style="margin-left:8px;color:#9ca3af;font-size:12px">越低越严谨，越高越发散</span>
-        </el-form-item>
-        <el-form-item label="最大令牌数">
-          <el-input-number v-model="form.max_tokens" :min="512" :max="128000" :step="512" />
-        </el-form-item>
-        <el-form-item label="设为默认">
-          <el-switch v-model="form.is_default_bool" />
+
+        <div class="form-row">
+          <el-form-item label="默认温度" style="flex: 1">
+            <el-input-number v-model="form.temperature_num" :min="0" :max="2" :step="0.1" controls-position="right" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="最大 Token" style="flex: 1">
+            <el-input-number v-model="form.max_tokens" :min="100" :step="1000" controls-position="right" style="width: 100%" />
+          </el-form-item>
+        </div>
+
+        <el-form-item>
+          <el-checkbox v-model="form.is_default_bool" label="设为默认模型" border />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showDialog = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">保存配置</el-button>
       </template>
     </el-dialog>
   </div>
@@ -122,7 +156,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { Plus, Edit, Delete, Promotion } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Promotion, MoreFilled, InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { modelApi } from '@/api/models'
 import type { AIModelConfig } from '@/api/types'
@@ -132,7 +166,6 @@ const providers = ref<any[]>([])
 const showDialog = ref(false)
 const saving = ref(false)
 const editId = ref<number>()
-const testingId = ref<number>()
 const formRef = ref()
 
 const form = reactive({
@@ -140,36 +173,39 @@ const form = reactive({
   temperature_num: 0.3, max_tokens: 4096, is_default_bool: false
 })
 
+const rules = {
+  provider: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+  model_name: [{ required: true, message: '请输入模型名称', trigger: 'change' }],
+}
+
 onMounted(async () => {
+  loadData()
+})
+
+async function loadData() {
   configs.value = await modelApi.list()
   providers.value = await modelApi.providers()
-})
+}
 
 const currentModels = computed(() => {
   const p = providers.value.find(p => p.id === form.provider)
   return p?.models || []
 })
 
-function providerLabel(id: string) {
-  return providers.value.find(p => p.id === id)?.name || id
-}
-function providerIcon(id: string) {
-  return { openai: '🤖', anthropic: '🔮', tongyi: '🌟', zhipu: '🧠', deepseek: '🔵' }[id] || '🤖'
-}
-function providerColor(id: string) {
-  return { openai: '#10a37f22', anthropic: '#cc785c22', tongyi: '#ff6a0022', zhipu: '#3b82f622', deepseek: '#6366f122' }[id] || '#f3f4f6'
-}
-
-function onProviderChange() {
-  const p = providers.value.find(p => p.id === form.provider)
-  if (p?.models?.length) form.model_name = p.models[0]
-}
-
+// Actions
 function openAdd() {
   editId.value = undefined
-  Object.assign(form, { provider: '', model_name: '', api_key: '', api_base_url: '',
-    temperature_num: 0.3, max_tokens: 4096, is_default_bool: false })
+  Object.assign(form, { 
+    provider: '', model_name: '', api_key: '', api_base_url: '',
+    temperature_num: 0.7, max_tokens: 4096, is_default_bool: false 
+  })
   showDialog.value = true
+}
+
+function handleCommand(cmd: string, cfg: AIModelConfig) {
+  if (cmd === 'test') testModel(cfg)
+  if (cmd === 'edit') editConfig(cfg)
+  if (cmd === 'delete') removeConfig(cfg)
 }
 
 function editConfig(cfg: AIModelConfig) {
@@ -177,14 +213,16 @@ function editConfig(cfg: AIModelConfig) {
   Object.assign(form, {
     provider: cfg.provider, model_name: cfg.model_name,
     api_key: '', api_base_url: cfg.api_base_url || '',
-    temperature_num: parseFloat(cfg.temperature) || 0.3,
+    temperature_num: parseFloat(cfg.temperature) || 0.7,
     max_tokens: cfg.max_tokens, is_default_bool: !!cfg.is_default
   })
   showDialog.value = true
 }
 
 async function handleSave() {
-  await formRef.value?.validate()
+  if (!formRef.value) return
+  await formRef.value.validate()
+  
   saving.value = true
   const payload = {
     provider: form.provider, model_name: form.model_name,
@@ -194,98 +232,226 @@ async function handleSave() {
     max_tokens: form.max_tokens,
     is_default: form.is_default_bool ? 1 : 0,
   }
+  
   try {
     if (editId.value) {
       await modelApi.update(editId.value, payload)
-      ElMessage.success('更新成功')
+      ElMessage.success('配置已更新')
     } else {
       await modelApi.add(payload)
-      ElMessage.success('添加成功')
+      ElMessage.success('配置已添加')
     }
-    configs.value = await modelApi.list()
+    loadData()
     showDialog.value = false
-  } finally { saving.value = false }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function testModel(cfg: AIModelConfig) {
-  testingId.value = cfg.id
+  const load = ElMessage.info({ message: '正在测试连通性...', duration: 0 })
   try {
     const res = await modelApi.test(cfg.id)
-    if (res?.ok) ElMessage.success(`模型连通成功：${cfg.model_name}`)
-    else ElMessage.error(`模型连通失败：${res?.error || '请检查配置'}`)
-  } finally {
-    testingId.value = undefined
+    load.close()
+    if (res?.ok) ElMessage.success(`测试成功：${cfg.model_name} 可用`)
+    else ElMessage.error(`测试失败：${res?.error || '连接超时或配置错误'}`)
+  } catch {
+    load.close()
+    ElMessage.error('网络请求失败')
   }
 }
 
 async function removeConfig(cfg: AIModelConfig) {
-  await ElMessageBox.confirm(`确认删除「${cfg.model_name}」配置？`, '删除确认', {
-    type: 'warning',
-    closeOnClickModal: false,
-    closeOnPressEscape: false,
-  })
-  await modelApi.remove(cfg.id)
-  ElMessage.success('已删除')
-  configs.value = await modelApi.list()
+  try {
+    await ElMessageBox.confirm(`确定删除 ${cfg.model_name} 吗？`, '删除确认', { type: 'warning' })
+    await modelApi.remove(cfg.id)
+    ElMessage.success('已删除')
+    loadData()
+  } catch {}
+}
+
+function onProviderChange() {
+  const p = providers.value.find(p => p.id === form.provider)
+  if (p?.models?.length) form.model_name = p.models[0]
+}
+
+// Helpers
+function providerLabel(id: string) { return providers.value.find(p => p.id === id)?.name || id }
+function providerIcon(id: string) {
+  const map: any = { openai: '🤖', anthropic: '🔮', tongyi: '🌟', zhipu: '🧠', deepseek: '🐋' }
+  return map[id] || '🤖'
 }
 </script>
 
 <style scoped>
-.settings-page { width: 100%; max-width: none; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
+.settings-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
-.model-grid {
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.subtitle { color: var(--text-secondary); font-size: 14px; }
+
+/* Layout */
+.settings-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.main-column {
+  flex: 1;
+  min-width: 0;
+}
+.side-column {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+/* Info Card */
+.info-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.info-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--primary); }
+.info-icon { font-size: 18px; }
+.info-header h4 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.info-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+/* Grid */
+.models-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(312px, 312px));
-  justify-content: flex-start;
-  align-items: start;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
-.model-card { display: flex; flex-direction: column; gap: 12px; min-height: 176px; border-radius: 16px; position: relative; overflow: hidden; }
-.model-card { background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%); border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); }
-.model-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4f6ef7 0%, #7c92ff 100%);
-  opacity: .55;
+
+.model-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: all 0.3s;
 }
-.model-card-header { display: flex; align-items: center; gap: 10px; }
-.provider-badge {
-  width: 40px; height: 40px; border-radius: 10px;
+.model-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+}
+
+.card-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+.provider-logo {
+  width: 44px; height: 44px;
+  border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
+  font-size: 22px;
+  background: var(--bg-secondary);
 }
-.model-main { min-width: 0; flex: 1; padding-right: 8px; }
-.model-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 188px; }
-.provider-name { font-size: 12px; color: var(--text-secondary); }
-.model-header-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.model-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.meta-item { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 7px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: help; }
-.meta-item em { font-style: normal; opacity: .95; }
-.meta-item strong { font-size: 13px; color: #111827; font-weight: 600; line-height: 1.2; }
-.model-actions { display: flex; flex-direction: column; gap: 2px; opacity: 0; transform: translateY(-2px); pointer-events: none; transition: opacity .2s, transform .2s; }
-.model-card:hover .model-actions, .model-card:focus-within .model-actions { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.model-actions :deep(.el-button) { width: 28px; height: 28px; }
-.model-actions :deep(.el-button:hover) { background: #eef2ff; color: #4f6ef7; }
+.provider-openai { color: #10a37f; background: rgba(16, 163, 127, 0.1); }
+.provider-anthropic { color: #cc785c; background: rgba(204, 120, 92, 0.1); }
 
-.add-model-card {
-  border: 2px dashed var(--border); border-radius: 14px; padding: 14px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; cursor: pointer; color: #9ca3af; min-height: 176px;
-  transition: all .2s; font-size: 14px;
-  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+.model-info { flex: 1; min-width: 0; }
+.model-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.model-name { 
+  font-weight: 700; 
+  font-size: 16px; 
+  color: var(--text-primary); 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+  max-width: 100%;
 }
-.add-model-card:hover { border-color: #4f6ef7; color: #4f6ef7; }
+.provider-name { font-size: 13px; color: var(--text-secondary); }
+.default-tag { height: 18px; padding: 0 6px; font-size: 11px; }
 
-.providers-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
-.providers-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.provider-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; }
-.provider-icon-lg { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.provider-item-name { font-size: 13px; font-weight: 600; }
-.provider-models { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.card-body {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; }
+.stat-label { color: var(--text-secondary); }
+.stat-val { font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-placeholder); }
+.status-dot.active { background: #10b981; }
+
+.add-card {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  min-height: 180px;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.5);
+  color: var(--text-placeholder);
+}
+.add-card:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.add-icon { 
+  width: 40px; height: 40px; border-radius: 50%; background: #fff; 
+  display: flex; align-items: center; justify-content: center; 
+  font-size: 20px; box-shadow: var(--shadow-sm);
+}
+.add-text { font-weight: 600; font-size: 14px; }
+
+/* Providers Section */
+.providers-section {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+.providers-section h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.providers-list { display: flex; flex-direction: column; gap: 10px; }
+.provider-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  cursor: default;
+}
+.provider-item:hover { background: var(--bg-secondary); }
+.p-icon { font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 6px; border: 1px solid var(--border); }
+.p-details { display: flex; flex-direction: column; }
+.p-name { font-size: 13px; font-weight: 600; }
+.p-models { font-size: 11px; color: var(--text-secondary); }
+
+.form-row { display: flex; gap: 16px; }
+.text-danger { color: var(--danger); }
+
+@media (max-width: 1024px) {
+  .settings-layout { flex-direction: column; }
+  .side-column { width: 100%; flex-direction: row; }
+  .info-card, .providers-section { flex: 1; }
+}
+@media (max-width: 768px) {
+  .side-column { flex-direction: column; }
+}
 </style>

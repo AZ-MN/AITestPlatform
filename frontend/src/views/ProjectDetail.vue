@@ -1,26 +1,44 @@
 <template>
   <div class="project-detail">
-    <div class="project-nav page-card" v-if="projectStore.current">
-      <div class="project-info">
-        <div class="project-title">
-          <span class="icon">{{ projectStore.current.icon }}</span>
-          <span class="name" :title="projectStore.current.name">{{ projectStore.current.name }}</span>
-        </div>
-        <div class="project-metrics">
-          <span class="metric-item">需求 {{ projectStore.current.req_count || 0 }}</span>
-          <span class="metric-item">用例 {{ projectStore.current.case_count || 0 }}</span>
-          <span class="metric-item">成员 {{ projectStore.current.member_count || 0 }}</span>
+    <div class="project-header" v-if="projectStore.current">
+      <div class="header-main">
+        <div class="project-brand">
+          <div class="project-icon">{{ projectStore.current.icon }}</div>
+          <div class="project-meta">
+            <h1 class="project-name" :title="projectStore.current.name">{{ projectStore.current.name }}</h1>
+            <div class="project-stats">
+              <span class="stat"><el-icon><Document /></el-icon> {{ projectStore.current.req_count || 0 }} 需求</span>
+              <span class="divider">/</span>
+              <span class="stat"><el-icon><List /></el-icon> {{ projectStore.current.case_count || 0 }} 用例</span>
+              <span class="divider">/</span>
+              <span class="stat"><el-icon><User /></el-icon> {{ projectStore.current.member_count || 0 }} 成员</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="tabs">
-        <router-link :to="`/projects/${projectStore.current.id}/requirements`" class="tab" :class="{ active: route.path.includes('/requirements') }">需求管理</router-link>
-        <router-link :to="`/projects/${projectStore.current.id}/generate`" class="tab" :class="{ active: route.path.includes('/generate') }">智能生成</router-link>
-        <router-link :to="`/projects/${projectStore.current.id}/cases`" class="tab" :class="{ active: route.path.includes('/cases') }">用例库</router-link>
-        <router-link :to="`/projects/${projectStore.current.id}/members`" class="tab" :class="{ active: route.path.includes('/members') }">项目成员</router-link>
+      
+      <div class="header-nav">
+        <router-link :to="`/projects/${projectStore.current.id}/requirements`" class="nav-item" active-class="active">
+          <el-icon><Document /></el-icon>需求管理
+        </router-link>
+        <router-link :to="`/projects/${projectStore.current.id}/generate`" class="nav-item" active-class="active">
+          <el-icon><MagicStick /></el-icon>智能生成
+        </router-link>
+        <router-link :to="`/projects/${projectStore.current.id}/cases`" class="nav-item" active-class="active">
+          <el-icon><Collection /></el-icon>用例库
+        </router-link>
+        <router-link :to="`/projects/${projectStore.current.id}/members`" class="nav-item" active-class="active">
+          <el-icon><User /></el-icon>项目成员
+        </router-link>
       </div>
     </div>
+
     <div class="detail-content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </div>
   </div>
 </template>
@@ -29,6 +47,7 @@
 import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
+import { Document, List, User, MagicStick, Collection } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
@@ -45,61 +64,116 @@ watch(() => route.params.id, loadProject)
 </script>
 
 <style scoped>
-.project-detail { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; }
-.detail-content { flex: 1; min-height: 0; overflow: hidden; }
-.project-nav {
+.project-detail { 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%; 
+  min-height: 0;
+  gap: 24px;
+}
+
+.project-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.header-main {
+  display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 14px;
-}
-.project-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.project-title { display: flex; align-items: center; gap: 8px; }
-.icon { font-size: 20px; }
-.name {
-  font-size: 15px;
-  font-weight: 600;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.project-metrics { display: flex; align-items: center; gap: 8px; }
-.metric-item {
-  font-size: 12px;
-  color: #6b7280;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  padding: 2px 8px;
-}
-.tabs {
-  display: flex;
-  gap: 6px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 4px;
-}
-.tab {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  display: inline-flex;
   align-items: center;
-  color: #4b5563;
-  text-decoration: none;
-  font-size: 13px;
-  white-space: nowrap;
 }
-.tab:hover { background: #f3f4f6; }
-.tab.active { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+
+.project-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.project-icon {
+  width: 56px;
+  height: 56px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  box-shadow: var(--shadow-sm);
+}
+.project-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.project-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+}
+.project-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.stat { display: flex; align-items: center; gap: 4px; }
+.divider { color: var(--border); }
+
+.header-nav {
+  display: flex;
+  gap: 32px;
+  margin-bottom: -1px; /* Overlap border */
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.nav-item:hover {
+  color: var(--primary);
+}
+.nav-item.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.nav-item .el-icon { font-size: 16px; }
+
+.detail-content { 
+  flex: 1; 
+  min-height: 0; 
+  overflow: hidden;
+  /* Adjust for nested views to fill space */
+  display: flex;
+  flex-direction: column;
+}
+/* Ensure nested views take full height */
+.detail-content :deep(> div) {
+  flex: 1;
+  height: 100%;
+}
 
 @media (max-width: 768px) {
-  .project-nav { flex-direction: column; align-items: stretch; gap: 10px; }
-  .project-info { justify-content: space-between; }
-  .project-metrics { display: none; }
-  .tabs { overflow-x: auto; }
+  .header-nav { overflow-x: auto; gap: 20px; padding-bottom: 4px; }
+  .project-name { font-size: 20px; }
+  .project-icon { width: 48px; height: 48px; font-size: 24px; }
 }
 </style>

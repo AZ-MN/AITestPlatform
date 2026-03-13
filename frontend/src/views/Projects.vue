@@ -1,384 +1,520 @@
 <template>
-  <div class="projects-page">
+  <div class="projects-container">
+    <!-- Page Header -->
     <div class="page-header">
-      <div>
-        <h2>项目管理</h2>
-        <div class="sub-title">统一管理项目资产与协作成员，点击卡片可直接进入项目</div>
+      <div class="header-content">
+        <h2>项目列表</h2>
+        <p class="subtitle">管理您的所有测试项目，包括需求分析与用例生成。</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="showCreate = true">新建项目</el-button>
+      <el-button type="primary" size="large" :icon="Plus" @click="openCreate">新建项目</el-button>
     </div>
 
-    <div class="toolbar page-card">
-      <el-input
-        v-model="keyword"
-        placeholder="搜索项目名称..."
-        clearable
-        style="width:260px"
-      />
-      <el-segmented v-model="statusFilter" :options="statusOptions" />
-      <span class="toolbar-stat">共 {{ filteredProjects.length }} / {{ projectStore.projects.length }} 个项目</span>
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="left-tools">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索项目..."
+          prefix-icon="Search"
+          clearable
+          class="search-input"
+        />
+        <el-radio-group v-model="statusFilter" class="status-filter">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="active">进行中</el-radio-button>
+          <el-radio-button label="archived">已归档</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="right-tools">
+        <span class="count-badge">共 {{ filteredProjects.length }} 个项目</span>
+      </div>
     </div>
 
-    <div class="project-grid">
+    <!-- Project Grid -->
+    <div v-if="filteredProjects.length > 0" class="project-grid">
       <div
         v-for="p in filteredProjects"
         :key="p.id"
         class="project-card"
-        tabindex="0"
         @click="openProject(p)"
-        @keydown.enter.prevent="openProject(p)"
-        @keydown.space.prevent="openProject(p)"
       >
-        <div class="card-top">
-          <div class="main-info">
-            <span class="p-icon">{{ p.icon }}</span>
-            <el-tooltip :content="p.name" placement="top">
-              <span class="p-name">{{ p.name }}</span>
-            </el-tooltip>
+        <div class="card-header">
+          <div class="icon-wrapper">{{ p.icon }}</div>
+          <div class="card-actions" @click.stop>
+            <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, p)">
+              <el-button link class="more-btn"><el-icon><MoreFilled /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit" :icon="Edit">编辑项目</el-dropdown-item>
+                  <el-dropdown-item command="archive" :icon="p.status === 'archived' ? 'RefreshLeft' : 'FolderRemove'">
+                    {{ p.status === 'archived' ? '恢复项目' : '归档项目' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" :icon="Delete" divided class="text-danger">删除项目</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
-          <div class="top-right">
-            <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small" :class="['status-tag', p.status === 'active' ? 'is-active' : 'is-archived']">
-              {{ p.status === 'active' ? '进行中' : '已归档' }}
-            </el-tag>
-            <div class="card-icons" @click.stop>
-              <el-tooltip content="编辑项目" placement="top">
-                <el-button text circle @click.stop="editProject(p)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip :content="p.status === 'archived' ? '取消归档项目' : '归档项目'" placement="top">
-                <el-button text circle type="warning" @click.stop="p.status === 'archived' ? unarchiveProject(p) : archiveProject(p)">
-                  <el-icon><RefreshLeft v-if="p.status === 'archived'" /><FolderRemove v-else /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="删除项目" placement="top">
-                <el-button text circle type="danger" :disabled="p.status === 'archived'" @click.stop="deleteProject(p)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
+        </div>
+        
+        <div class="card-body">
+          <h3 class="project-name">{{ p.name }}</h3>
+          <p class="project-desc">{{ p.description || '暂无描述' }}</p>
+        </div>
+
+        <div class="card-footer">
+          <div class="stats">
+            <div class="stat-item" title="需求数量">
+              <el-icon><Document /></el-icon>
+              <span>{{ p.req_count || 0 }}</span>
+            </div>
+            <div class="stat-item" title="用例数量">
+              <el-icon><List /></el-icon>
+              <span>{{ p.case_count || 0 }}</span>
+            </div>
+            <div class="stat-item" title="成员数量">
+              <el-icon><User /></el-icon>
+              <span>{{ p.member_count || 0 }}</span>
             </div>
           </div>
-        </div>
-        <div class="p-desc">{{ p.description || '暂无项目描述，点击进入后可补充。' }}</div>
-        <div class="p-stats">
-          <el-tooltip content="需求数量" placement="top">
-            <span class="stat-pill"><em>📄</em><strong>{{ p.req_count }}</strong></span>
-          </el-tooltip>
-          <el-tooltip content="用例数量" placement="top">
-            <span class="stat-pill"><em>🧪</em><strong>{{ p.case_count }}</strong></span>
-          </el-tooltip>
-          <el-tooltip content="成员数量" placement="top">
-            <span class="stat-pill"><em>👥</em><strong>{{ p.member_count }}</strong></span>
-          </el-tooltip>
+          <el-tag :type="p.status === 'active' ? 'success' : 'info'" size="small" effect="plain" class="status-tag">
+            {{ p.status === 'active' ? '进行中' : '已归档' }}
+          </el-tag>
         </div>
       </div>
-
-      <div class="add-card" @click="showCreate = true">
-        <el-icon :size="36"><Plus /></el-icon>
-        <span>新建项目</span>
+      
+      <!-- Add Card -->
+      <div class="add-card" @click="openCreate">
+        <el-icon class="add-icon"><Plus /></el-icon>
+        <span class="add-text">新建项目</span>
       </div>
     </div>
 
-    <!-- 新建项目弹窗 -->
-    <el-dialog v-model="showCreate" :title="editMode ? '编辑项目' : '新建项目'" width="480px" :close-on-click-modal="false">
-      <el-form ref="formRef" :model="form" label-width="80px">
+    <!-- Empty State -->
+    <div v-else class="empty-state">
+      <div class="empty-icon">📂</div>
+      <h3>没有找到项目</h3>
+      <p>试着调整搜索条件，或者创建一个新项目。</p>
+      <el-button v-if="keyword || statusFilter !== 'all'" @click="resetFilters">清除筛选</el-button>
+      <el-button v-else type="primary" @click="openCreate">新建第一个项目</el-button>
+    </div>
+
+    <!-- Create/Edit Dialog -->
+    <el-dialog
+      v-model="showDialog"
+      :title="isEdit ? '编辑项目' : '新建项目'"
+      width="500px"
+      align-center
+      destroy-on-close
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="项目图标">
-          <div class="icon-picker">
-            <span v-for="ico in icons" :key="ico"
-              :class="['icon-opt', { active: form.icon === ico }]"
-              @click="form.icon = ico">{{ ico }}</span>
+          <div class="icon-selector">
+            <div 
+              v-for="icon in iconList" 
+              :key="icon" 
+              class="icon-option"
+              :class="{ active: form.icon === icon }"
+              @click="form.icon = icon"
+            >
+              {{ icon }}
+            </div>
           </div>
         </el-form-item>
-        <el-form-item label="项目名称" prop="name" :rules="[{ required: true, message: '请输入项目名称', trigger: 'blur' }]">
-          <el-input v-model="form.name" placeholder="请输入项目名称" />
+        <el-form-item label="项目名称" prop="name">
+          <el-input v-model="form.name" placeholder="例如：电商后台管理系统" size="large" />
         </el-form-item>
-        <el-form-item label="项目描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="项目描述（可选）" />
+        <el-form-item label="项目描述" prop="description">
+          <el-input 
+            v-model="form.description" 
+            type="textarea" 
+            :rows="3" 
+            placeholder="简要描述项目的目标和范围..." 
+          />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreate = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">{{ editMode ? '保存' : '创建' }}</el-button>
+        <div class="dialog-footer">
+          <el-button @click="showDialog = false">取消</el-button>
+          <el-button type="primary" :loading="submitting" @click="handleSubmit">
+            {{ isEdit ? '保存修改' : '立即创建' }}
+          </el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Edit, Delete, FolderRemove, RefreshLeft } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '@/stores/project'
 import { projectApi } from '@/api/projects'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Search, MoreFilled, Edit, Delete, FolderRemove, RefreshLeft, Document, List, User } from '@element-plus/icons-vue'
 import type { Project } from '@/api/types'
 
-const projectStore = useProjectStore()
 const router = useRouter()
-const showCreate = ref(false)
-const editMode = ref(false)
-const saving = ref(false)
-const editId = ref<number>()
-const formRef = ref()
-const icons = ['📋', '🛒', '🏦', '🏥', '🎮', '📱', '💼', '🚀', '🔧', '🌐', '📊', '🤖']
-const keyword = ref('')
-const statusFilter = ref<'all' | 'active' | 'archived'>('all')
-const statusOptions = [
-  { label: '全部', value: 'all' },
-  { label: '进行中', value: 'active' },
-  { label: '已归档', value: 'archived' },
-]
+const projectStore = useProjectStore()
 
-const form = reactive({ name: '', description: '', icon: '📋' })
+// State
+const keyword = ref('')
+const statusFilter = ref('all')
+const showDialog = ref(false)
+const isEdit = ref(false)
+const submitting = ref(false)
+const formRef = ref()
+const currentEditId = ref<number | null>(null)
+
+const iconList = ['🚀', '💻', '📱', '🌐', '🛒', '🎮', '📊', '🔒', '☁️', '🎨']
+
+const form = reactive({
+  name: '',
+  description: '',
+  icon: '🚀'
+})
+
+const rules = {
+  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }]
+}
+
+// Computed
 const filteredProjects = computed(() => {
-  const key = keyword.value.trim().toLowerCase()
   return projectStore.projects.filter(p => {
-    const statusOk = statusFilter.value === 'all' || p.status === statusFilter.value
-    const keyOk = !key || p.name.toLowerCase().includes(key)
-    return statusOk && keyOk
+    const matchStatus = statusFilter.value === 'all' || p.status === statusFilter.value
+    const matchKey = p.name.toLowerCase().includes(keyword.value.toLowerCase())
+    return matchStatus && matchKey
   })
 })
 
-onMounted(() => projectStore.fetchProjects())
+// Lifecycle
+onMounted(() => {
+  projectStore.fetchProjects()
+})
 
+// Actions
 function openProject(p: Project) {
   projectStore.setCurrent(p)
   router.push(`/projects/${p.id}/requirements`)
 }
 
-function editProject(p: Project) {
-  editMode.value = true
-  editId.value = p.id
-  form.name = p.name
-  form.description = p.description || ''
-  form.icon = p.icon
-  showCreate.value = true
+function openCreate() {
+  isEdit.value = false
+  currentEditId.value = null
+  form.name = ''
+  form.description = ''
+  form.icon = iconList[0]
+  showDialog.value = true
 }
 
-async function handleSave() {
-  await formRef.value?.validate()
-  saving.value = true
+function handleCommand(cmd: string, p: Project) {
+  if (cmd === 'edit') {
+    isEdit.value = true
+    currentEditId.value = p.id
+    form.name = p.name
+    form.description = p.description || ''
+    form.icon = p.icon
+    showDialog.value = true
+  } else if (cmd === 'archive') {
+    toggleArchive(p)
+  } else if (cmd === 'delete') {
+    confirmDelete(p)
+  }
+}
+
+async function handleSubmit() {
+  if (!formRef.value) return
+  await formRef.value.validate()
+  
+  submitting.value = true
   try {
-    if (editMode.value && editId.value) {
-      await projectApi.update(editId.value, form)
-      ElMessage.success('更新成功')
+    if (isEdit.value && currentEditId.value) {
+      await projectApi.update(currentEditId.value, form)
+      ElMessage.success('项目已更新')
     } else {
       await projectApi.create(form)
-      ElMessage.success('项目创建成功')
+      ElMessage.success('项目已创建')
     }
     await projectStore.fetchProjects()
-    showCreate.value = false
-    editMode.value = false
-    Object.assign(form, { name: '', description: '', icon: '📋' })
+    showDialog.value = false
   } finally {
-    saving.value = false
+    submitting.value = false
   }
 }
 
-async function archiveProject(p: Project) {
-  await ElMessageBox.confirm(`确认归档项目「${p.name}」？`, '归档确认', {
-    type: 'warning',
-    closeOnClickModal: false,
-    closeOnPressEscape: false,
-  })
+async function toggleArchive(p: Project) {
+  const isArchived = p.status === 'archived'
+  const action = isArchived ? '恢复' : '归档'
+  
   try {
-    await projectApi.archive(p.id)
-  } catch (e: any) {
-    if (e?.response?.status === 404) {
-      await projectApi.setStatus(p.id, 'archived')
+    await ElMessageBox.confirm(`确定要${action}项目 "${p.name}" 吗？`, '提示', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消'
+    })
+    
+    if (isArchived) {
+      await projectApi.unarchive(p.id)
     } else {
-      throw e
+      await projectApi.archive(p.id)
     }
+    ElMessage.success(`项目已${action}`)
+    projectStore.fetchProjects()
+  } catch (e) {
+    // Cancelled
   }
-  ElMessage.success('已归档')
-  await projectStore.fetchProjects()
 }
 
-async function unarchiveProject(p: Project) {
-  await ElMessageBox.confirm(`确认将项目「${p.name}」取消归档？`, '取消归档确认', {
-    type: 'info',
-    closeOnClickModal: false,
-    closeOnPressEscape: false,
-  })
+async function confirmDelete(p: Project) {
   try {
-    await projectApi.unarchive(p.id)
-  } catch (e: any) {
-    if (e?.response?.status === 404) {
-      await projectApi.setStatus(p.id, 'active')
-    } else {
-      throw e
-    }
+    await ElMessageBox.confirm(
+      `确定要永久删除项目 "${p.name}" 吗？此操作不可恢复！`,
+      '危险操作',
+      {
+        type: 'error',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    await projectApi.purge(p.id).catch(() => projectApi.remove(p.id))
+    ElMessage.success('项目已删除')
+    if (projectStore.current?.id === p.id) projectStore.current = null
+    projectStore.fetchProjects()
+  } catch (e) {
+    // Cancelled or error
   }
-  ElMessage.success('已取消归档')
-  await projectStore.fetchProjects()
 }
 
-async function deleteProject(p: Project) {
-  if (p.status === 'archived') {
-    ElMessage.warning('已归档项目不可删除，请先取消归档')
-    return
-  }
-  await ElMessageBox.confirm(
-    `确认永久删除项目「${p.name}」？该操作将同时删除其需求和测试用例，且不可恢复。`,
-    '删除确认',
-    {
-      type: 'error',
-      confirmButtonText: '确认删除',
-      cancelButtonText: '取消',
-      closeOnClickModal: false,
-      closeOnPressEscape: false,
-    }
-  )
-  try {
-    await projectApi.purge(p.id)
-  } catch (e: any) {
-    if (e?.response?.status === 404) {
-      await projectApi.remove(p.id)
-    } else {
-      throw e
-    }
-  }
-  const latest = await projectApi.list()
-  if (latest.some(item => item.id === p.id)) {
-    ElMessage.error('删除未生效，请稍后重试（建议重启后端）')
-    await projectStore.fetchProjects()
-    return
-  }
-  if (projectStore.current?.id === p.id) projectStore.current = null
-  ElMessage.success('项目已删除')
-  await projectStore.fetchProjects()
+function resetFilters() {
+  keyword.value = ''
+  statusFilter.value = 'all'
 }
 </script>
 
 <style scoped>
-.projects-page { width: 100%; max-width: none; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.page-header h2 { font-size: 22px; font-weight: 700; }
-.sub-title { margin-top: 4px; font-size: 13px; color: var(--text-secondary); }
-.toolbar {
-  margin-bottom: 16px;
+.projects-container {
+  width: 100%;
+  height: 100%;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  flex-direction: column;
 }
-.toolbar-stat { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
 
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.page-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--card-bg);
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+.left-tools {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.search-input {
+  width: 280px;
+}
+.count-badge {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Grid Layout */
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(312px, 312px));
-  justify-content: flex-start;
-  align-items: start;
-  gap: 16px;
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  padding-bottom: 20px;
 }
+
 .project-card {
-  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 14px;
-  transition: all .2s;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
   position: relative;
   overflow: hidden;
-  min-height: 176px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
-.project-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4f6ef7 0%, #7c92ff 100%);
-  opacity: 0;
-  transition: opacity .2s;
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
 }
-.project-card:hover::before { opacity: 1; }
-.project-card:hover { border-color: #c7d2fe; box-shadow: 0 8px 20px rgba(79,110,247,.12); transform: translateY(-2px); }
-.project-card:focus-visible { outline: 2px solid #4f6ef7; outline-offset: 2px; }
-.card-top { position: relative; margin-bottom: 10px; min-height: 58px; }
-.main-info { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 46px; }
-.top-right { position: absolute; right: 0; top: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.card-icons { display: flex; flex-direction: column; align-items: center; opacity: 0; transform: translateY(-2px); pointer-events: none; transition: opacity .2s, transform .2s; }
-.project-card:hover .card-icons, .project-card:focus-within .card-icons { opacity: 1; }
-.project-card:hover .card-icons, .project-card:focus-within .card-icons { transform: translateY(0); pointer-events: auto; }
-.p-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: inline-flex;
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+.icon-wrapper {
+  width: 48px;
+  height: 48px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5ff;
+  font-size: 24px;
+  transition: background 0.2s;
 }
-.p-name {
-  font-size: 16px;
-  font-weight: 600;
+.project-card:hover .icon-wrapper {
+  background: var(--primary-light);
+}
+
+.card-body {
+  flex: 1;
+  margin-bottom: 20px;
+}
+.project-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 190px;
 }
-.p-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; }
-.p-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
-.stat-pill {
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 6px 8px;
-  display: inline-flex;
-  justify-content: center;
+.project-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.stats {
+  display: flex;
+  gap: 16px;
+}
+.stat-item {
+  display: flex;
   align-items: center;
   gap: 6px;
-  cursor: help;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
-.stat-pill em { font-style: normal; opacity: .95; }
-.stat-pill strong { font-size: 14px; color: #111827; line-height: 1.2; }
-.status-tag { border-radius: 999px; font-weight: 600; }
-:deep(.card-icons .el-button + .el-button) { margin-left: 0; }
-:deep(.card-icons .el-button.is-text) { width: 26px; height: 26px; }
+.stat-item .el-icon { font-size: 14px; }
 
+/* Add Card Style */
 .add-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: transparent;
   border: 2px dashed var(--border);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   cursor: pointer;
-  color: #9ca3af;
-  min-height: 176px;
-  transition: all .2s;
-  font-size: 14px;
+  transition: all 0.2s;
+  min-height: 200px; /* Match typical card height */
+  color: var(--text-placeholder);
+  gap: 12px;
 }
-.add-card:hover { border-color: #4f6ef7; color: #4f6ef7; }
+.add-card:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.add-icon { font-size: 32px; }
+.add-text { font-weight: 600; font-size: 14px; }
 
-.icon-picker { display: flex; flex-wrap: wrap; gap: 8px; }
-.icon-opt {
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  border: 2px solid var(--border);
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-secondary);
+}
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Dialog Styles */
+.icon-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.icon-option {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
-  transition: all .15s;
+  font-size: 20px;
+  transition: all 0.2s;
 }
-.icon-opt.active { border-color: #4f6ef7; background: var(--primary-light); }
-.icon-opt:hover { border-color: #4f6ef7; }
+.icon-option:hover {
+  background: var(--bg-secondary);
+}
+.icon-option.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.text-danger {
+  color: var(--danger);
+}
 
 @media (max-width: 768px) {
-  .toolbar { flex-wrap: wrap; }
-  .toolbar-stat { margin-left: 0; }
-  .top-right { gap: 4px; }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .left-tools {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-input {
+    width: 100%;
+  }
 }
 </style>
