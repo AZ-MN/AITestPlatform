@@ -25,12 +25,60 @@
       </div>
     </div>
 
+    
+
+    <!-- 底部区：最近项目 + 运行状态 -->
+    <div class="bottom-row">
+      <!-- Recently Active Projects (Small Panel) -->
+      <div class="section project-section-small">
+      <div class="section-header">
+        <h3>最近项目</h3>
+        <el-button link type="primary" @click="$router.push('/projects')">全部项目 <el-icon><ArrowRight /></el-icon></el-button>
+      </div>
+      <div class="project-grid-mini">
+        <div v-for="p in recentProjects" :key="p.id" class="project-mini-card" @click="openProject(p)">
+          <div class="pm-icon">{{ p.icon }}</div>
+          <div class="pm-info">
+            <div class="pm-name" :title="p.name">{{ p.name }}</div>
+            <div class="pm-desc" :title="p.description">{{ p.description || '暂无描述' }}</div>
+          </div>
+          <el-icon class="pm-arrow"><ArrowRight /></el-icon>
+        </div>
+        <div v-if="recentProjects.length === 0" class="empty-placeholder">
+          暂无最近项目，去创建吧！
+        </div>
+      </div>
+    </div>
+
+      <!-- Status Board (Mini) -->
+      <div class="section status-mini">
+        <div class="section-header"><h3>运行状态</h3></div>
+        <div class="status-content">
+          <div class="status-row-item">
+            <span class="label">活跃率</span>
+            <div class="value-group">
+              <span class="value">{{ activeRate }}%</span>
+              <el-progress type="circle" :percentage="activeRate" :width="20" :stroke-width="3" :show-text="false" color="#10b981" />
+            </div>
+          </div>
+          <div class="status-divider"></div>
+          <div class="status-row-item">
+            <span class="label">AI 就绪</span>
+            <div class="value-group">
+              <span class="value">{{ modelCount > 0 ? 'Ready' : 'Not' }}</span>
+              <el-icon class="status-icon-check" :class="{ ready: modelCount > 0 }"><CircleCheckFilled /></el-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 中间引导区：快速开始 + 运行状态 -->
     <div class="guide-row">
       <!-- Quick Start Guide -->
       <div class="section guide-section">
         <div class="section-header">
-          <h3><el-icon><Guide /></el-icon> 快速开始指引</h3>
+          <h3><el-icon><Guide /></el-icon> 快速开始</h3>
         </div>
         <div class="guide-steps">
           <div class="step-card" @click="$router.push('/projects')">
@@ -62,52 +110,7 @@
         </div>
       </div>
 
-      <!-- Status Board (Mini) -->
-      <div class="section status-mini">
-        <div class="section-header"><h3>运行状态</h3></div>
-        <div class="status-content">
-          <div class="status-row-item">
-            <span class="label">活跃率</span>
-            <div class="value-group">
-              <span class="value">{{ activeRate }}%</span>
-              <el-progress type="circle" :percentage="activeRate" :width="20" :stroke-width="3" :show-text="false" color="#10b981" />
-            </div>
-          </div>
-          <div class="status-divider"></div>
-          <div class="status-row-item">
-            <span class="label">AI 就绪</span>
-            <div class="value-group">
-              <span class="value">{{ modelCount > 0 ? 'Yes' : 'No' }}</span>
-              <el-icon class="status-icon-check" :class="{ ready: modelCount > 0 }"><CircleCheckFilled /></el-icon>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Recently Active Projects (Full Width) -->
-    <div class="section project-section">
-      <div class="section-header">
-        <h3>最近项目</h3>
-        <el-button link type="primary" @click="$router.push('/projects')">全部项目 <el-icon><ArrowRight /></el-icon></el-button>
-      </div>
-      <div class="project-list-horizontal">
-        <div v-for="p in recentProjects" :key="p.id" class="project-card-h" @click="openProject(p)">
-          <div class="ph-icon">{{ p.icon }}</div>
-          <div class="ph-info">
-            <div class="ph-name">{{ p.name }}</div>
-            <div class="ph-desc">{{ p.description || '暂无描述' }}</div>
-          </div>
-          <div class="ph-stats">
-            <span class="ph-tag"><el-icon><Document /></el-icon> {{ p.req_count }}</span>
-            <span class="ph-tag"><el-icon><List /></el-icon> {{ p.case_count }}</span>
-          </div>
-          <el-icon class="ph-arrow"><ArrowRight /></el-icon>
-        </div>
-        <div v-if="recentProjects.length === 0" class="empty-placeholder">
-          暂无最近项目，去创建吧！
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -300,14 +303,17 @@ function providerName(p: string) {
 }
 
 /* Guide Row */
-.guide-row {
+.guide-row-full {
+  display: block;
+  margin-bottom: 24px;
+}
+.bottom-row {
   display: grid;
   grid-template-columns: 3fr 1fr;
   gap: 24px;
 }
 .guide-section {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #bbf7d0;
+  background: #fff;
 }
 .guide-steps {
   display: flex;
@@ -318,8 +324,8 @@ function providerName(p: string) {
 }
 .step-card {
   flex: 1;
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(255,255,255,0.8);
+  background: #fff;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 16px;
   display: flex;
@@ -331,33 +337,38 @@ function providerName(p: string) {
   overflow: hidden;
 }
 .step-card:hover {
-  background: #fff;
+  background: var(--bg-secondary);
+  border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 .step-num {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 800;
-  color: #10b981;
-  opacity: 0.2;
+  color: var(--primary);
+  opacity: 0.15;
   position: absolute;
-  right: -4px;
-  top: -8px;
+  right: 64px;
+  top: 8px;
   font-family: 'Arial', sans-serif;
+  line-height: 1;
+  z-index: 0;
 }
-.step-content { flex: 1; z-index: 1; }
+.step-content { flex: 1; z-index: 1; min-width: 0; }
 .step-title { font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
-.step-desc { font-size: 12px; color: var(--text-secondary); }
+.step-desc { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .step-icon { 
   width: 36px; height: 36px; 
-  background: #10b981; 
-  color: #fff; 
+  background: var(--bg-secondary); 
+  color: var(--primary);
   border-radius: 8px; 
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   z-index: 1;
+  border: 1px solid var(--border);
 }
-.step-arrow { color: #10b981; opacity: 0.5; font-size: 20px; }
+.step-card:hover .step-icon { background: var(--primary); color: #fff; border-color: var(--primary); }
+.step-arrow { color: var(--border); opacity: 0.8; font-size: 20px; }
 
 /* Status Mini */
 .status-mini {
@@ -383,45 +394,52 @@ function providerName(p: string) {
 .status-icon-check { color: var(--border); font-size: 18px; }
 .status-icon-check.ready { color: #10b981; }
 
-/* Horizontal Project List */
-.project-list-horizontal {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
+/* Recent Projects (Mini Panel) */
+.project-section-small {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  padding: 16px 24px;
 }
-.project-card-h {
+.project-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.project-mini-card {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
-.project-card-h:hover {
+.project-mini-card:hover {
   border-color: var(--primary);
   background: var(--bg-secondary);
-  transform: translateX(4px);
 }
-.ph-icon {
-  width: 44px; height: 44px;
-  font-size: 22px;
+.pm-icon {
+  width: 36px; height: 36px;
+  font-size: 18px;
   background: var(--bg);
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
-.ph-info { flex: 1; min-width: 0; }
-.ph-name { font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 2px; }
-.ph-desc { font-size: 12px; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
-.ph-stats { display: flex; gap: 12px; }
-.ph-tag { 
+.pm-info { flex: 1; min-width: 0; overflow: hidden; }
+.pm-name { 
+  font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pm-desc { 
   font-size: 12px; color: var(--text-secondary); 
-  display: flex; align-items: center; gap: 4px; 
-  background: var(--bg); padding: 2px 8px; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
 }
-.ph-arrow { color: var(--text-placeholder); font-size: 16px; }
+.pm-arrow { color: var(--text-placeholder); font-size: 14px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s; }
+.project-mini-card:hover .pm-arrow { opacity: 1; }
 
 .empty-placeholder { padding: 40px; text-align: center; color: var(--text-secondary); }
 
@@ -430,7 +448,7 @@ function providerName(p: string) {
   .stat-cards { grid-template-columns: repeat(2, 1fr); }
   .guide-row { grid-template-columns: 1fr; }
   .status-mini { display: none; }
-  .project-list-horizontal { grid-template-columns: 1fr; }
+  .project-grid-mini { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -438,14 +456,7 @@ function providerName(p: string) {
   .stat-cards { grid-template-columns: 1fr; gap: 16px; }
   .guide-steps { flex-direction: column; gap: 12px; }
   .step-arrow { transform: rotate(90deg); }
-}
-
-@media (max-width: 768px) {
-  .page-title { flex-direction: column; align-items: flex-start; padding: 20px; }
-  .stat-cards { grid-template-columns: 1fr; gap: 16px; }
-  .project-list { gap: 12px; }
-  .project-card { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .p-meta { margin-left: 0; width: 100%; justify-content: space-between; }
-  .side-column { flex-direction: column; }
+  .title-actions { width: 100%; display: flex; gap: 12px; margin-top: 12px; }
+  .title-actions .el-button { flex: 1; }
 }
 </style>

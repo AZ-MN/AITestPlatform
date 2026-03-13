@@ -8,10 +8,33 @@
       <el-button type="primary" :icon="Plus" @click="openAdd">添加模型</el-button>
     </div>
 
-    <div class="settings-layout">
-      <!-- Main Content: Models Grid -->
-      <div class="main-column">
-        <div class="models-grid">
+    <div class="settings-content">
+      <!-- Top Info Section -->
+      <div class="top-section">
+        <div class="info-card">
+          <div class="info-header">
+            <el-icon class="info-icon"><InfoFilled /></el-icon>
+            <h4>配置说明</h4>
+          </div>
+          <p class="info-text">
+            配置 API Key 后即可启用 AI 生成功能。建议至少配置一个模型（如 OpenAI、Claude 或 DeepSeek）以保证生成质量。
+          </p>
+        </div>
+
+        <div class="providers-card">
+          <div class="providers-header">
+             <h4>支持的供应商</h4>
+          </div>
+          <div class="providers-row">
+             <div v-for="p in providers" :key="p.id" class="provider-badge">
+                <span class="p-icon-small">{{ providerIcon(p.id) }}</span>
+                <span class="p-name-small">{{ p.name }}</span>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="models-grid">
           <div v-for="cfg in configs" :key="cfg.id" class="model-card">
             <div class="card-header">
               <div class="provider-logo" :class="`provider-${cfg.provider}`">
@@ -64,35 +87,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Side Column: Info & Providers -->
-      <div class="side-column">
-        <!-- Info Card -->
-        <div class="info-card">
-          <div class="info-header">
-            <el-icon class="info-icon"><InfoFilled /></el-icon>
-            <h4>配置说明</h4>
-          </div>
-          <p class="info-text">
-            配置 API Key 后即可启用 AI 生成功能。建议至少配置一个模型（如 OpenAI、Claude 或 DeepSeek）以保证生成质量。
-          </p>
-        </div>
-
-        <!-- Providers List -->
-        <div class="providers-section">
-          <h3>支持的供应商</h3>
-          <div class="providers-list">
-            <div v-for="p in providers" :key="p.id" class="provider-item">
-              <span class="p-icon">{{ providerIcon(p.id) }}</span>
-              <div class="p-details">
-                <div class="p-name">{{ p.name }}</div>
-                <div class="p-models">{{ p.models.length }} 个预设模型</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Edit Dialog -->
     <el-dialog 
@@ -310,33 +304,97 @@ function providerIcon(id: string) {
 /* Layout */
 .settings-layout {
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-.main-column {
-  flex: 1;
-  min-width: 0;
-}
-.side-column {
-  width: 320px;
-  display: flex;
   flex-direction: column;
+  gap: 24px;
+}
+
+/* Top Section */
+.top-section {
+  display: flex;
   gap: 20px;
-  flex-shrink: 0;
 }
 
 /* Info Card */
 .info-card {
+  flex: 1;
   background: var(--card-bg);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 24px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.info-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--primary); }
-.info-icon { font-size: 18px; }
-.info-header h4 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0; }
-.info-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.info-header { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  margin-bottom: 12px; 
+  color: var(--primary); 
+}
+.info-icon { font-size: 20px; }
+.info-header h4 { 
+  font-size: 16px; 
+  font-weight: 700; 
+  color: var(--text-primary); 
+  margin: 0; 
+}
+.info-text { 
+  font-size: 14px; 
+  color: var(--text-secondary); 
+  line-height: 1.6; 
+  margin: 0;
+}
+
+/* Providers Card */
+.providers-card {
+  width: 420px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.providers-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.providers-header h3 { 
+  font-size: 15px; 
+  font-weight: 700; 
+  margin: 0; 
+  color: var(--text-primary);
+}
+.provider-tags { 
+  display: flex; 
+  gap: 12px; 
+  flex-wrap: wrap; 
+}
+.provider-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.provider-tag:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
 
 /* Grid */
 .models-grid {
@@ -447,11 +505,7 @@ function providerIcon(id: string) {
 .text-danger { color: var(--danger); }
 
 @media (max-width: 1024px) {
-  .settings-layout { flex-direction: column; }
-  .side-column { width: 100%; flex-direction: row; }
-  .info-card, .providers-section { flex: 1; }
-}
-@media (max-width: 768px) {
-  .side-column { flex-direction: column; }
+  .top-section { flex-direction: column; }
+  .providers-card { width: 100%; }
 }
 </style>

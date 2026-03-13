@@ -5,7 +5,7 @@
         <div class="project-brand">
           <div class="project-icon">{{ projectStore.current.icon }}</div>
           <div class="project-meta">
-            <h1 class="project-name" :title="projectStore.current.name">{{ projectStore.current.name }}</h1>
+            <h1 class="project-name" :title="projectStore.current.name">{{ truncatedName }}</h1>
             <div class="project-stats">
               <span class="stat"><el-icon><Document /></el-icon> {{ projectStore.current.req_count || 0 }} 需求</span>
               <span class="divider">/</span>
@@ -44,13 +44,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectStore } from '@/stores/project'
 import { Document, List, User, MagicStick, Collection } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const projectStore = useProjectStore()
+
+const truncatedName = computed(() => {
+  const name = projectStore.current?.name || ''
+  return name.length > 20 ? name.slice(0, 20) + '...' : name
+})
 
 async function loadProject() {
   const id = Number(route.params.id)

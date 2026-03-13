@@ -20,10 +20,12 @@
           class="search-input"
         />
         <el-radio-group v-model="statusFilter" class="status-filter">
-          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="all">全部项目</el-radio-button>
           <el-radio-button label="active">进行中</el-radio-button>
           <el-radio-button label="archived">已归档</el-radio-button>
         </el-radio-group>
+        
+        <el-button @click="resetFilters" class="reset-btn">重置</el-button>
       </div>
       <div class="right-tools">
         <span class="count-badge">共 {{ filteredProjects.length }} 个项目</span>
@@ -38,27 +40,28 @@
         class="project-card"
         @click="openProject(p)"
       >
-        <div class="card-header">
+        <div class="card-main">
           <div class="icon-wrapper">{{ p.icon }}</div>
-          <div class="card-actions" @click.stop>
-            <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, p)">
-              <el-button link class="more-btn"><el-icon><MoreFilled /></el-icon></el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit" :icon="Edit">编辑项目</el-dropdown-item>
-                  <el-dropdown-item command="archive" :icon="p.status === 'archived' ? 'RefreshLeft' : 'FolderRemove'">
-                    {{ p.status === 'archived' ? '恢复项目' : '归档项目' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item command="delete" :icon="Delete" divided class="text-danger">删除项目</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+          <div class="card-content">
+            <div class="card-top-row">
+              <h3 class="project-name">{{ p.name }}</h3>
+              <div class="card-actions" @click.stop>
+                <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, p)">
+                  <el-button link class="more-btn"><el-icon><MoreFilled /></el-icon></el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="edit" :icon="Edit">编辑项目</el-dropdown-item>
+                      <el-dropdown-item command="archive" :icon="p.status === 'archived' ? 'RefreshLeft' : 'FolderRemove'">
+                        {{ p.status === 'archived' ? '恢复项目' : '归档项目' }}
+                      </el-dropdown-item>
+                      <el-dropdown-item command="delete" :icon="Delete" divided class="text-danger">删除项目</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+            <p class="project-desc">{{ p.description || '暂无描述' }}</p>
           </div>
-        </div>
-        
-        <div class="card-body">
-          <h3 class="project-name">{{ p.name }}</h3>
-          <p class="project-desc">{{ p.description || '暂无描述' }}</p>
         </div>
 
         <div class="card-footer">
@@ -192,6 +195,11 @@ onMounted(() => {
 })
 
 // Actions
+function resetFilters() {
+  keyword.value = ''
+  statusFilter.value = 'all'
+}
+
 function openProject(p: Project) {
   projectStore.setCurrent(p)
   router.push(`/projects/${p.id}/requirements`)
@@ -285,11 +293,6 @@ async function confirmDelete(p: Project) {
     // Cancelled or error
   }
 }
-
-function resetFilters() {
-  keyword.value = ''
-  statusFilter.value = 'all'
-}
 </script>
 
 <style scoped>
@@ -347,7 +350,7 @@ function resetFilters() {
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  gap: 16px;
   padding-bottom: 20px;
 }
 
@@ -355,7 +358,7 @@ function resetFilters() {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
@@ -369,36 +372,47 @@ function resetFilters() {
   border-color: var(--primary);
 }
 
-.card-header {
+.card-main {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex: 1;
 }
 .icon-wrapper {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: var(--bg-secondary);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 22px;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 .project-card:hover .icon-wrapper {
   background: var(--primary-light);
 }
 
-.card-body {
+.card-content {
   flex: 1;
-  margin-bottom: 20px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 2px;
 }
 .project-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -406,7 +420,7 @@ function resetFilters() {
   overflow: hidden;
 }
 .project-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
   display: -webkit-box;
@@ -420,20 +434,20 @@ function resetFilters() {
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--border);
-  padding-top: 16px;
+  padding-top: 12px;
 }
 .stats {
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
-.stat-item .el-icon { font-size: 14px; }
+.stat-item .el-icon { font-size: 13px; }
 
 /* Add Card Style */
 .add-card {
@@ -446,16 +460,16 @@ function resetFilters() {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 200px; /* Match typical card height */
+  min-height: 140px; /* Match typical card height */
   color: var(--text-placeholder);
-  gap: 12px;
+  gap: 8px;
 }
 .add-card:hover {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-light);
 }
-.add-icon { font-size: 32px; }
+.add-icon { font-size: 28px; }
 .add-text { font-weight: 600; font-size: 14px; }
 
 /* Empty State */
@@ -468,6 +482,32 @@ function resetFilters() {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
+}
+
+/* Filter Button Overrides */
+.status-filter .el-radio-button__inner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  box-shadow: none !important;
+}
+.status-filter .el-radio-button__original-radio:checked + .el-radio-button__inner {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: -1px 0 0 0 var(--primary) !important;
+}
+/* Reset Button Override */
+.reset-btn {
+  margin-left: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.reset-btn:hover, .reset-btn:focus {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
 }
 
 /* Dialog Styles */

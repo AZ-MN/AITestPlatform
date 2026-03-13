@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <el-aside :width="collapsed ? '64px' : '220px'" class="sidebar">
       <div class="sidebar-header">
-        <span class="logo-icon">🧪</span>
+        <span class="logo-icon">✨</span>
         <transition name="fade">
           <span v-if="!collapsed" class="logo-text">AI测试平台</span>
         </transition>
@@ -13,29 +13,36 @@
         :default-active="activeMenu"
         :collapse="collapsed"
         :collapse-transition="false"
-        router
         class="sidebar-menu"
       >
-        <el-menu-item index="/dashboard">
+        <el-menu-item index="/dashboard" @click="router.push('/dashboard')">
           <el-icon><DataAnalysis /></el-icon>
           <template #title>仪表盘</template>
         </el-menu-item>
 
-        <el-menu-item index="/projects">
+        <el-menu-item index="/projects" @click="router.push('/projects')">
           <el-icon><Folder /></el-icon>
           <template #title>项目管理</template>
         </el-menu-item>
 
-        <el-menu-item index="/settings">
+        <el-menu-item index="/settings" @click="router.push('/settings')">
           <el-icon><Setting /></el-icon>
           <template #title>模型设置</template>
         </el-menu-item>
       </el-menu>
 
       <div class="sidebar-footer">
-        <el-icon class="collapse-btn" @click="collapsed = !collapsed">
-          <Fold v-if="!collapsed" /><Expand v-else />
-        </el-icon>
+        <el-tooltip 
+          :content="collapsed ? '展开导航' : '收起导航'" 
+          placement="right" 
+          :show-after="500"
+        >
+          <div class="collapse-trigger" @click="collapsed = !collapsed">
+            <el-icon class="collapse-icon">
+              <Fold v-if="!collapsed" /><Expand v-else />
+            </el-icon>
+          </div>
+        </el-tooltip>
       </div>
     </el-aside>
 
@@ -45,7 +52,7 @@
         <div class="header-left">
           <el-breadcrumb>
             <el-breadcrumb-item v-for="b in breadcrumbs" :key="b.path" :to="b.path">
-              {{ b.title }}
+              <span class="crumb-text" :title="b.title">{{ b.title }}</span>
             </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
@@ -205,6 +212,27 @@ async function handleCommand(cmd: string) {
   justify-content: center;
 }
 
+.collapse-trigger {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.collapse-trigger:hover {
+  background: rgba(79, 70, 229, 0.8);
+  transform: scale(1.1);
+  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
+}
+.collapse-icon { font-size: 20px; transition: transform 0.3s; }
+.collapse-trigger:hover .collapse-icon { transform: rotate(180deg); }
+
 /* Main Container */
 .main-container { 
   flex: 1;
@@ -216,6 +244,14 @@ async function handleCommand(cmd: string) {
 }
 
 /* Floating Header */
+.crumb-text {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
 .app-header {
   height: 64px;
   position: absolute;

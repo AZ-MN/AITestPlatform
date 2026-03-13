@@ -58,7 +58,7 @@
       >
         <el-table-column label="需求标题" prop="title" min-width="240" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="req-title-cell">{{ row.title }}</span>
+            <span class="req-title-cell">{{ truncate(row.title) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="来源" width="100" align="center">
@@ -154,7 +154,7 @@
     </el-dialog>
 
     <!-- Detail Drawer -->
-    <el-drawer v-model="showPoints" :title="currentReq?.title || '需求详情'" size="600px" class="detail-drawer">
+    <el-drawer v-model="showPoints" :title="truncate(currentReq?.title || '需求详情', 30)" size="600px" class="detail-drawer">
       <div class="drawer-content">
         <div class="drawer-header-actions">
            <div class="meta-info">
@@ -346,6 +346,7 @@ async function saveReqEdit() {
 const fmtDate = (s: string) => new Date(s).toLocaleString('zh-CN', { dateStyle: 'short', timeStyle: 'short' })
 const statusLabel = (s: string) => ({parsed:'已解析', parsing:'解析中', failed:'失败'})[s] || s
 const priorityType = (p: string): any => ({P0:'danger', P1:'warning', P2:'primary'})[p] || 'info'
+const truncate = (s: string, n=20) => s?.length > n ? s.slice(0, n) + '...' : s
 </script>
 
 <style scoped>
