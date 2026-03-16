@@ -52,7 +52,7 @@
         />
       </div>
       
-      <el-table :data="filteredMembers" style="width: 100%" v-loading="loading">
+      <el-table :data="filteredMembers" style="width: 100%" height="100%" v-loading="loading">
         <el-table-column label="成员" min-width="200">
           <template #default="{ row }">
             <div class="user-cell">
@@ -311,9 +311,10 @@ function stringToColor(str: string) {
 
 <style scoped>
 .members-container {
-  max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-desc {
@@ -387,11 +388,21 @@ function stringToColor(str: string) {
 
 /* Content Card */
 .content-card {
+  flex: 1;
+  min-height: 0;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.el-table {
+  flex: 1;
+  height: 100%;
 }
 .table-toolbar {
   margin-bottom: 20px;

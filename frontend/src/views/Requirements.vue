@@ -548,6 +548,8 @@ const truncate = (s: string, n=20) => s?.length > n ? s.slice(0, n) + '...' : s
 .stat-value.primary { color: var(--primary); }
 .stat-divider { width: 1px; height: 24px; background: var(--border); margin: 0 24px; }
 
+.header-actions { margin-left: auto; display: flex; gap: 12px; }
+
 /* Table */
 .table-container {
   flex: 1;
