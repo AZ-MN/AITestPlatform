@@ -34,10 +34,26 @@
 start.bat
 ```
 
+说明：若默认端口 8000 或 5173 已被占用，脚本会自动选择附近的可用端口，并在启动完成后输出实际访问地址。
+
+Windows 停止服务：
+
+```bat
+stop.bat
+```
+
 ### Linux/macOS 一键启动
 
 ```bash
 chmod +x start.sh && ./start.sh
+```
+
+说明：若默认端口 8000 或 5173 已被占用，脚本会自动选择附近的可用端口，并在启动完成后输出实际访问地址。
+
+Linux/macOS 停止服务：
+
+```bash
+chmod +x stop.sh && ./stop.sh
 ```
 
 ### 手动启动

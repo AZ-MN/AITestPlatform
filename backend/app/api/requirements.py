@@ -1,13 +1,13 @@
 import os
 import uuid
-import aiofiles
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.security import get_current_user
+from app.core.upload_utils import sanitize_upload_filename, save_upload_with_limit
 from app.models.user import User
 from app.models.requirement import Requirement
 from app.schemas.requirement import RequirementCreate, RequirementUpdate, RequirementOut, RequirementParseRequest
@@ -30,17 +30,25 @@ async def list_requirements(
         .order_by(Requirement.created_at.desc())
         .all()
     )
+    creator_ids = {r.created_by for r in reqs if r.created_by}
+    users = (
+        db.query(User).filter(User.id.in_(creator_ids)).all()
+        if creator_ids
+        else []
+    )
+    by_id = {u.id: u for u in users}
     result = []
     for r in reqs:
         item = RequirementOut.model_validate(r).model_dump()
-        creator = db.query(User).filter(User.id == r.created_by).first()
-        item["creator_name"] = creator.full_name if creator else ""
+        c = by_id.get(r.created_by)
+        item["creator_name"] = c.full_name if c else ""
         result.append(item)
     return result
 
 
 @router.post("/upload", summary="上传需求文档并解析")
 async def upload_requirement(
+    request: Request,
     project_id: int = Form(...),
     title: str = Form(...),
     file: UploadFile = File(...),
@@ -49,17 +57,21 @@ async def upload_requirement(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # 校验文件类型
-    ext = os.path.splitext(file.filename)[1].lower().lstrip(".")
-    if ext not in settings.ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"不支持的文件格式: {ext}")
+    try:
+        safe_name = sanitize_upload_filename(file.filename, settings.ALLOWED_EXTENSIONS)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
-    # 保存文件
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit() and int(cl) > settings.MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"文件大小超过限制（最大 {settings.MAX_FILE_SIZE // (1024 * 1024)}MB）",
+        )
+
     file_id = str(uuid.uuid4())
-    save_path = os.path.join(settings.UPLOAD_DIR, f"{file_id}_{file.filename}")
-    async with aiofiles.open(save_path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
+    save_path = os.path.join(settings.UPLOAD_DIR, f"{file_id}_{safe_name}")
+    await save_upload_with_limit(file, save_path, settings.MAX_FILE_SIZE)
 
     # 创建需求记录（先标记为 parsing）
     req = Requirement(
@@ -68,7 +80,7 @@ async def upload_requirement(
         title=title,
         source_type="file",
         source_file=save_path,
-        source_filename=file.filename,
+        source_filename=safe_name,
         status="parsing",
     )
     db.add(req)
@@ -77,7 +89,7 @@ async def upload_requirement(
 
     # 提取文本
     try:
-        text_content = await extract_text_from_file(save_path, file.filename)
+        text_content = await extract_text_from_file(save_path, safe_name)
         req.content = text_content[:50000]  # 限制存储长度
     except Exception as e:
         req.status = "failed"

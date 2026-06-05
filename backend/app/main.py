@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 
+from loguru import logger
+
 from app.core.config import settings
 from app.core.database import init_db
 
@@ -53,6 +55,7 @@ def _seed_default_data():
             db.add(ProjectMember(project_id=proj.id, user_id=admin.id, role="project_admin"))
             db.commit()
     except Exception:
+        logger.exception("初始化默认数据失败")
         db.rollback()
     finally:
         db.close()
